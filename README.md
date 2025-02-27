@@ -1,6 +1,6 @@
-# PlayerCoordsAPI
-
 <div align="center">
+
+# PlayerCoordsAPI
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.21.4-green)
@@ -66,8 +66,8 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 ## 🔒 Security
 
 For security reasons, the API server:
-- Only accepts connections from localhost (127.0.0.1)
-- Runs on port 25565 by default
+- Only accepts connections from localhost `127.0.0.1`
+- Runs on port `25565` by default
 - Provides read-only access to player position data
 
 ## 🛠️ Examples
