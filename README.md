@@ -49,19 +49,19 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 
 ### Response Fields
 
-| Field       | Type   | Description                                                             |
-|-------------|--------|-------------------------------------------------------------------------|
-| `x`         | number | X-coordinate (East/West position)                                       |
-| `y`         | number | Y-coordinate (Height/Depth)                                             |
-| `z`         | number | Z-coordinate (North/South position)                                     |
-| `dimension` | string | Current dimension (e.g., "minecraft:overworld", "minecraft:the_nether") |
+| Field       | Type     | Description                                                             |
+|-------------|----------|-------------------------------------------------------------------------|
+| `x`         | `number` | X-coordinate (East/West position)                                       |
+| `y`         | `number` | Y-coordinate (Height/Depth)                                             |
+| `z`         | `number` | Z-coordinate (North/South position)                                     |
+| `dimension` | `string` | Current dimension (e.g., "minecraft:overworld", "minecraft:the_nether") |
 
 ### Error Responses
 
-| Status | Description                                                      |
-|--------|------------------------------------------------------------------|
-| 403    | Access denied (only localhost connections are allowed)           |
-| 404    | Player not in world (returned when player data is not available) |
+| Status  | Description                                                      |
+|---------|------------------------------------------------------------------|
+| `403`   | Access denied (only localhost connections are allowed)           |
+| `404`   | Player not in world (returned when player data is not available) |
 
 ## 🔒 Security
 
