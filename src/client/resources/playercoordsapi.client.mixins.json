@@ -1,9 +1,9 @@
 {
 	"required": true,
-	"package": "com.example.mixin",
+	"package": "fr.sukikui.mixin.client",
 	"compatibilityLevel": "JAVA_21",
-	"mixins": [
-		"ExampleMixin"
+	"client": [
+		"PlayerCoordsAPIClientMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
