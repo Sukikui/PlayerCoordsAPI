@@ -20,6 +20,9 @@
 		],
 		"client": [
 			"fr.sukikui.PlayerCoordsAPIClient"
+		],
+		"modmenu": [
+			"fr.sukikui.config.ModMenuIntegration"
 		]
 	},
 	"mixins": [
@@ -33,7 +36,11 @@
 		"fabricloader": ">=0.16.10",
 		"minecraft": "~1.21.4",
 		"java": ">=21",
-		"fabric-api": "*"
+		"fabric-api": "*",
+		"cloth-config": ">=13.0.0"
+	},
+	"recommends": {
+		"modmenu": ">=9.0.0"
 	},
 	"suggests": {
 		"another-mod": "*"

@@ -18,8 +18,8 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 ## ✨ Features
 
 - Lightweight HTTP server running only on localhost
-- JSON-formatted coordinate data (X, Y, Z)
-- Current dimension information
+- JSON-formatted coordinate data x, y, z
+- Current world
 - Client-side only - no server-side components needed
 - Works in singleplayer and multiplayer
 
@@ -43,25 +43,25 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
   "x": 123.45,
   "y": 64.00,
   "z": -789.12,
-  "dimension": "minecraft:overworld"
+  "dimension": "overworld"
 }
 ```
 
 ### Response Fields
 
-| Field       | Type     | Description                                                             |
-|-------------|----------|-------------------------------------------------------------------------|
-| `x`         | `number` | X-coordinate (East/West position)                                       |
-| `y`         | `number` | Y-coordinate (Height/Depth)                                             |
-| `z`         | `number` | Z-coordinate (North/South position)                                     |
-| `dimension` | `string` | Current dimension (e.g., "minecraft:overworld", "minecraft:the_nether") |
+| Field   | Type     | Description                                      |
+|---------|----------|--------------------------------------------------|
+| `x`     | `number` | East-West                                        |
+| `y`     | `number` | Height                                           |
+| `z`     | `number` | North-South                                      |
+| `world` | `string` | Minecraft world (overworld, the_nether, the_end) |
 
 ### Error Responses
 
-| Status  | Description                                                      |
-|---------|------------------------------------------------------------------|
-| `403`   | Access denied (only localhost connections are allowed)           |
-| `404`   | Player not in world (returned when player data is not available) |
+| Status | Message             |
+|--------|---------------------|
+| `403`  | Access denied       |
+| `404`  | Player not in world |
 
 ## 🔒 Security
 
@@ -86,7 +86,7 @@ data = response.json()
 print(f"Player at X: {data['x']}, Y: {data['y']}, Z: {data['z']} in {data['dimension']}")
 ```
 
-### JavaScript/Node.js
+### JavaScript
 ```javascript
 fetch("http://localhost:25565/coords")
   .then(response => response.json())
