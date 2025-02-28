@@ -17,7 +17,7 @@ jobs:
       - name: 🐘 Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
-      - name: ☕ Setup jdk
+      - name: ☕ Setup JDK
         uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -26,7 +26,7 @@ jobs:
       - name: 🐘 Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: 🛠 build
+      - name: 🛠 Build
         run: |
           java -version
           ./gradlew build --stacktrace
