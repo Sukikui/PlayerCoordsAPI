@@ -12,9 +12,7 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 
 ## ✨ Features
 
-- Lightweight HTTP server running only on localhost
-- JSON-formatted coordinate data x, y, z
-- Current world
+- Lightweight HTTP server running only on localhost providing your coordinates
 - Client-side only - no server-side components needed
 - Works in singleplayer and multiplayer
 
