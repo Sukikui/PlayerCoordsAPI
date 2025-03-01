@@ -65,8 +65,9 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
 			PlayerCoordsAPI.LOGGER.info("Stopping PlayerCoordsAPI HTTP server");
 			
 			// Create a separate thread to stop the server to prevent blocking
+			final HttpServer serverToStop = server; // Create a final reference for the thread
 			Thread stopThread = new Thread(() -> {
-				server.stop(0); // Stop with no delay
+				serverToStop.stop(0); // Stop with no delay
 				PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server stopped successfully");
 			});
 			stopThread.setDaemon(true);
