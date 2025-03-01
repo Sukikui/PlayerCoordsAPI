@@ -19,7 +19,7 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 ## 🚀 Installation
 
 1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 1.21.4
-2. Download the latest `playercoordsapi-x.x.x.jar` from the [releases page](https://github.com/Sukikui/PlayerCoordsAPI/releases)
+2. Download the latest `playercoordsapi-x.x.x+mcx.x.x.jar` from the [releases page](https://github.com/Sukikui/PlayerCoordsAPI/releases)
 3. Place the jar in your `.minecraft/mods` folder
 4. Launch Minecraft with the Fabric profile
 
@@ -88,6 +88,6 @@ fetch("http://localhost:25565/coords")
 
 <div align="center">
 Made with ❤️ by 
-<img src="https://crafatar.com/avatars/7d2159e810514c3eb504c279cadd4273?size=100&overlay" width="20" height="20"> 
-Sukikui 
+<img src="https://crafatar.com/avatars/7d2159e810514c3eb504c279cadd4273?size=100&overlay" width="20" height="20" style="vertical-align: -3px;"> 
+Sukikui
 </div>
