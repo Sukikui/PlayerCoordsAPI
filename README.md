@@ -38,7 +38,7 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
   "x": 123.45,
   "y": 64.00,
   "z": -789.12,
-  "dimension": "overworld"
+  "world": "overworld"
 }
 ```
 
