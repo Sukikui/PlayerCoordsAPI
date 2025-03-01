@@ -3,7 +3,7 @@
 	"id": "playercoordsapi",
 	"version": "${version}",
 	"name": "PlayerCoordsAPI",
-	"description": "Fabric mod exposing player coordinates via a local HTTP API on the Minecraft client",
+	"description": "A lightweight Fabric mod that exposes your Minecraft player coordinates via a local HTTP API",
 	"authors": [
 		"Sukikui"
 	],
