@@ -8,8 +8,9 @@
 		"Sukikui"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/Sukikui/PlayerCoordsAPI"
+		"homepage": "https://github.com/Sukikui/PlayerCoordsAPI",
+		"sources": "https://github.com/Sukikui/PlayerCoordsAPI.git",
+		"issues": "https://github.com/Sukikui/PlayerCoordsAPI/issues"
 	},
 	"license": "MIT",
 	"icon": "assets/playercoordsapi/icon.png",
