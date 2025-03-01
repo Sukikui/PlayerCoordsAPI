@@ -76,14 +76,14 @@ import requests
 
 response = requests.get("http://localhost:25565/coords")
 data = response.json()
-print(f"Player at X: {data['x']}, Y: {data['y']}, Z: {data['z']} in {data['dimension']}")
+print(f"Player at X: {data['x']}, Y: {data['y']}, Z: {data['z']} in {data['world']}")
 ```
 
 ### JavaScript
 ```javascript
 fetch("http://localhost:25565/coords")
   .then(response => response.json())
-  .then(data => console.log(`Player at X: ${data.x}, Y: ${data.y}, Z: ${data.z} in ${data.dimension}`));
+  .then(data => console.log(`Player at X: ${data.x}, Y: ${data.y}, Z: ${data.z} in ${data.world}`));
 ```
 
 <div align="center">
