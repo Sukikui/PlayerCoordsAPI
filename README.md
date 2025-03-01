@@ -2,11 +2,6 @@
 
 # PlayerCoordsAPI
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Minecraft](https://img.shields.io/badge/Minecraft-1.21.4-green)
-![Fabric](https://img.shields.io/badge/Fabric-0.16.10-orange)
-![License](https://img.shields.io/badge/license-MIT-yellow)
-
 A lightweight Fabric mod that exposes your Minecraft player coordinates via a local HTTP API.
 
 </div>
