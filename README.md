@@ -94,5 +94,7 @@ fetch("http://localhost:25565/coords")
 ```
 
 <div align="center">
-Made with ❤️ by Sukikui
+Made with ❤️ by 
+<img src="https://crafatar.com/avatars/7d2159e810514c3eb504c279cadd4273?size=100&overlay" width="20" height="20"> 
+Sukikui 
 </div>
