@@ -42,4 +42,4 @@ jobs:
           files: build/libs/!(*-@(dev|sources|all)).jar
           version-type: release
           loaders: fabric quilt
-          version-resolver: latest
+          game-version-filter: latest
