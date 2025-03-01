@@ -32,9 +32,9 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 
 ## 🔌 API Usage
 
-| Endpoint  | Method | Description                                            |
-|-----------|--------|--------------------------------------------------------|
-| `/coords` | `GET`  | Returns the player's current coordinates and dimension |
+| Endpoint  | Method | Description                                        |
+|-----------|--------|----------------------------------------------------|
+| `/coords` | `GET`  | Returns the player's current coordinates and world |
 
 ### Response Format
 
