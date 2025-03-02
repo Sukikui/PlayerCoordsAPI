@@ -6,6 +6,8 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.world.biome.Biome;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -97,10 +99,14 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
 			double z = player.getZ();
 			String world = player.getWorld().getRegistryKey().getValue().toString();
 			
+			// Get biome information
+			RegistryEntry<Biome> biomeEntry = player.getWorld().getBiome(player.getBlockPos());
+			String biome = biomeEntry.getKey().orElseThrow().getValue().toString();
+			
 			// Format as JSON
 			responseText = String.format(
-				"{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\"}",
-				x, y, z, world
+				"{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\", \"biome\": \"%s\"}",
+				x, y, z, world, biome
 			);
 			sendResponse(exchange, 200, responseText);
 		} else {

@@ -26,9 +26,9 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 
 ## 🔌 API Usage
 
-| Endpoint      | Method | Description                                        |
-|---------------|--------|----------------------------------------------------|
-| `/api/coords` | `GET`  | Returns the player's current coordinates and world |
+| Endpoint      | Method | Description                                              |
+|---------------|--------|----------------------------------------------------------|
+| `/api/coords` | `GET`  | Returns the player's current coordinates and world infos |
 
 ### Response Format
 
@@ -37,18 +37,20 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
   "x": 123.45,
   "y": 64.00,
   "z": -789.12,
-  "world": "overworld"
+  "world": "overworld",
+  "biome": "plains"
 }
 ```
 
 ### Response Fields
 
-| Field   | Type     | Description                                      |
-|---------|----------|--------------------------------------------------|
-| `x`     | `number` | East-West                                        |
-| `y`     | `number` | Height                                           |
-| `z`     | `number` | North-South                                      |
-| `world` | `string` | Minecraft world (overworld, the_nether, the_end) |
+| Field   | Type     | Description     |
+|---------|----------|-----------------|
+| `x`     | `number` | East-West       |
+| `y`     | `number` | Height          |
+| `z`     | `number` | North-South     |
+| `world` | `string` | Minecraft world |
+| `biome` | `string` | Minecraft biome |
 
 ### Error Responses
 
@@ -77,14 +79,14 @@ import requests
 
 response = requests.get("http://localhost:25565/api/coords")
 data = response.json()
-print(f"Player at X: {data['x']}, Y: {data['y']}, Z: {data['z']} in {data['world']}")
+print(f"Player at X: {data['x']}, Y: {data['y']}, Z: {data['z']}")
 ```
 
 ### JavaScript
 ```javascript
 fetch("http://localhost:25565/api/coords")
   .then(response => response.json())
-  .then(data => console.log(`Player at X: ${data.x}, Y: ${data.y}, Z: ${data.z} in ${data.world}`));
+  .then(data => console.log(`Player at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
 ```
 
 <div align="center">
