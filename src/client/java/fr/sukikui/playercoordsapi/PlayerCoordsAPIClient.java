@@ -1,8 +1,7 @@
-package fr.sukikui;
+package fr.sukikui.playercoordsapi;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import fr.sukikui.config.ModConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
@@ -50,7 +49,7 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
 		try {
 			PlayerCoordsAPI.LOGGER.info("Starting PlayerCoordsAPI HTTP server on port " + PORT);
 			server = HttpServer.create(new InetSocketAddress(PORT), 0);
-			server.createContext("/coords", this::handleCoordsRequest);
+			server.createContext("/api/coords", this::handleCoordsRequest);
 			server.setExecutor(Executors.newSingleThreadExecutor());
 			server.start();
 			serverStarted = true;

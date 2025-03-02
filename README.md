@@ -15,6 +15,7 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 - Lightweight HTTP server running only on localhost providing your coordinates
 - Client-side only - no server-side components needed
 - Works in singleplayer and multiplayer
+- Mod menu integration allowing you to enable/disable the API
 
 ## 🚀 Installation
 
@@ -25,9 +26,9 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 
 ## 🔌 API Usage
 
-| Endpoint  | Method | Description                                        |
-|-----------|--------|----------------------------------------------------|
-| `/coords` | `GET`  | Returns the player's current coordinates and world |
+| Endpoint      | Method | Description                                        |
+|---------------|--------|----------------------------------------------------|
+| `/api/coords` | `GET`  | Returns the player's current coordinates and world |
 
 ### Response Format
 
@@ -67,21 +68,21 @@ For security reasons, the API server:
 
 ### cURL
 ```bash
-curl http://localhost:25565/coords
+curl http://localhost:25565/api/coords
 ```
 
 ### Python
 ```python
 import requests
 
-response = requests.get("http://localhost:25565/coords")
+response = requests.get("http://localhost:25565/api/coords")
 data = response.json()
 print(f"Player at X: {data['x']}, Y: {data['y']}, Z: {data['z']} in {data['world']}")
 ```
 
 ### JavaScript
 ```javascript
-fetch("http://localhost:25565/coords")
+fetch("http://localhost:25565/api/coords")
   .then(response => response.json())
   .then(data => console.log(`Player at X: ${data.x}, Y: ${data.y}, Z: ${data.z} in ${data.world}`));
 ```

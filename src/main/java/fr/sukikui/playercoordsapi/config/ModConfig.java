@@ -1,9 +1,9 @@
-package fr.sukikui.config;
+package fr.sukikui.playercoordsapi.config;
 
 import me.shedaniel.autoconfig.ConfigData;
 import me.shedaniel.autoconfig.annotation.Config;
 import me.shedaniel.autoconfig.annotation.ConfigEntry;
-import fr.sukikui.PlayerCoordsAPI;
+import fr.sukikui.playercoordsapi.PlayerCoordsAPI;
 
 @Config(name = PlayerCoordsAPI.MOD_ID)
 public class ModConfig implements ConfigData {

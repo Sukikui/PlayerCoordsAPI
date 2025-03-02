@@ -1,6 +1,6 @@
-package fr.sukikui;
+package fr.sukikui.playercoordsapi;
 
-import fr.sukikui.config.ModConfig;
+import fr.sukikui.playercoordsapi.config.ModConfig;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.JanksonConfigSerializer;
 import net.fabricmc.api.ModInitializer;
@@ -28,7 +28,7 @@ public class PlayerCoordsAPI implements ModInitializer {
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 
-		LOGGER.info("PlayerCoordsAPI initialized - coordinates will be available at http://localhost:25565/coords when enabled");
+		LOGGER.info("PlayerCoordsAPI initialized - API will be available at http://localhost:25565/api when enabled");
 	}
 	
 	public static ModConfig getConfig() {

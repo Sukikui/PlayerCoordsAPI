@@ -17,13 +17,13 @@
 	"environment": "client",
 	"entrypoints": {
 		"main": [
-			"fr.sukikui.PlayerCoordsAPI"
+			"fr.sukikui.playercoordsapi.PlayerCoordsAPI"
 		],
 		"client": [
-			"fr.sukikui.PlayerCoordsAPIClient"
+			"fr.sukikui.playercoordsapi.PlayerCoordsAPIClient"
 		],
 		"modmenu": [
-			"fr.sukikui.config.ModMenuIntegration"
+			"fr.sukikui.playercoordsapi.config.ModMenuIntegration"
 		]
 	},
 	"mixins": [
