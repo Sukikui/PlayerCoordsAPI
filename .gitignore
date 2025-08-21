@@ -6,6 +6,9 @@ run/
 out/
 classes/
 
+# gradle wrapper jar (optional - some teams prefer to commit this)
+gradle/wrapper/gradle-wrapper.jar
+
 # eclipse
 
 *.launch
@@ -31,11 +34,15 @@ bin/
 
 # fabric
 
-run/
-
 # java
 
 hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
+# personal
+
+.claude/
+CLAUDE.md
+GEMINI.md
