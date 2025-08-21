@@ -6,6 +6,9 @@ run/
 out/
 classes/
 
+# gradle wrapper jar (optional - some teams prefer to commit this)
+gradle/wrapper/gradle-wrapper.jar
+
 # eclipse
 
 *.launch
@@ -30,8 +33,6 @@ bin/
 *.DS_Store
 
 # fabric
-
-run/
 
 # java
 
