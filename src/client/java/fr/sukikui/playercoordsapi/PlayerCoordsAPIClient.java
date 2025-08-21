@@ -103,10 +103,14 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
 			RegistryEntry<Biome> biomeEntry = player.getWorld().getBiome(player.getBlockPos());
 			String biome = biomeEntry.getKey().orElseThrow().getValue().toString();
 			
+			// Get player UUID and username
+			String uuid = player.getUuid().toString();
+			String username = player.getName().getString();
+			
 			// Format as JSON
 			responseText = String.format(
-				"{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\", \"biome\": \"%s\"}",
-				x, y, z, world, biome
+				"{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
+				x, y, z, world, biome, uuid, username
 			);
 			sendResponse(exchange, 200, responseText);
 		} else {

@@ -38,19 +38,23 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
   "y": 64.00,
   "z": -789.12,
   "world": "overworld",
-  "biome": "plains"
+  "biome": "plains",
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "PlayerName"
 }
 ```
 
 ### Response Fields
 
-| Field   | Type     | Description     |
-|---------|----------|-----------------|
-| `x`     | `number` | East-West       |
-| `y`     | `number` | Height          |
-| `z`     | `number` | North-South     |
-| `world` | `string` | Minecraft world |
-| `biome` | `string` | Minecraft biome |
+| Field      | Type     | Description       |
+|------------|----------|-------------------|
+| `x`        | `number` | East-West         |
+| `y`        | `number` | Height            |
+| `z`        | `number` | North-South       |
+| `world`    | `string` | Minecraft world   |
+| `biome`    | `string` | Minecraft biome   |
+| `uuid`     | `string` | Player UUID       |
+| `username` | `string` | Player username   |
 
 ### Error Responses
 
@@ -79,14 +83,14 @@ import requests
 
 response = requests.get("http://localhost:25565/api/coords")
 data = response.json()
-print(f"Player at X: {data['x']}, Y: {data['y']}, Z: {data['z']}")
+print(f"Player {data['username']} (UUID: {data['uuid']}) at X: {data['x']}, Y: {data['y']}, Z: {data['z']}")
 ```
 
 ### JavaScript
 ```javascript
 fetch("http://localhost:25565/api/coords")
   .then(response => response.json())
-  .then(data => console.log(`Player at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
+  .then(data => console.log(`Player ${data.username} (UUID: ${data.uuid}) at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
 ```
 
 <div align="center">
