@@ -42,3 +42,10 @@ jobs:
           files: build/libs/!(*-@(dev|sources|all)).jar
           version-type: release
           loaders: fabric quilt
+
+      - name: 📝 Sync Modrinth description from README
+        uses: funnyboy-roks/modrinth-auto-desc@v1.6
+        with:
+          auth-token: ${{ secrets.MODRINTH_TOKEN }}
+          slug: ZTxdoq6g
+          readme: README.md
