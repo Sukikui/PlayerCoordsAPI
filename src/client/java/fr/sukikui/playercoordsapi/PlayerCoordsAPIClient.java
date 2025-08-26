@@ -15,115 +15,130 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
 public class PlayerCoordsAPIClient implements ClientModInitializer {
-	private HttpServer server;
-	private boolean serverStarted = false;
-	// Hardcoded port value - no longer in config
-	private static final int PORT = 25565;
+    private HttpServer server;
+    private boolean serverStarted = false;
+    // Hardcoded port value - no longer in config
+    private static final int PORT = 25565;
 
-	@Override
-	public void onInitializeClient() {
-		// Start server on init if enabled
-		if (PlayerCoordsAPI.getConfig().enabled) {
-			startServer();
-		}
-		
-		// Register tick event to constantly check config status
-		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			boolean configEnabled = PlayerCoordsAPI.getConfig().enabled;
-			
-			// If enabled and server not started, start server
-			if (configEnabled && !serverStarted) {
-				startServer();
-			}
-			
-			// If disabled and server is running, stop server
-			if (!configEnabled && serverStarted) {
-				stopServer();
-			}
-		});
-		
-		PlayerCoordsAPI.LOGGER.info("Registered config monitor");
-	}
-	
-	private void startServer() {
-		if (serverStarted) return;
-		
-		try {
-			PlayerCoordsAPI.LOGGER.info("Starting PlayerCoordsAPI HTTP server on port " + PORT);
-			server = HttpServer.create(new InetSocketAddress(PORT), 0);
-			server.createContext("/api/coords", this::handleCoordsRequest);
-			server.setExecutor(Executors.newSingleThreadExecutor());
-			server.start();
-			serverStarted = true;
-			PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server started successfully");
-		} catch (IOException e) {
-			PlayerCoordsAPI.LOGGER.error("Failed to start PlayerCoordsAPI HTTP server", e);
-		}
-	}
-	
-	private void stopServer() {
-		if (server != null) {
-			PlayerCoordsAPI.LOGGER.info("Stopping PlayerCoordsAPI HTTP server");
-			
-			// Create a separate thread to stop the server to prevent blocking
-			final HttpServer serverToStop = server; // Create a final reference for the thread
-			Thread stopThread = new Thread(() -> {
-				serverToStop.stop(0); // Stop with no delay
-				PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server stopped successfully");
-			});
-			stopThread.setDaemon(true);
-			stopThread.start();
-			
-			// Set variables immediately so we know the server is being stopped
-			server = null;
-			serverStarted = false;
-		}
-	}
+    @Override
+    public void onInitializeClient() {
+        // Start server on init if enabled
+        if (PlayerCoordsAPI.getConfig().enabled) {
+            startServer();
+        }
 
-	private void handleCoordsRequest(HttpExchange exchange) throws IOException {
-		// Check if the client is allowed to access (only localhost)
-		String remoteAddress = exchange.getRemoteAddress().getAddress().getHostAddress();
-		if (!remoteAddress.equals("127.0.0.1") && !remoteAddress.equals("0:0:0:0:0:0:0:1")) {
-			sendResponse(exchange, 403, "{\"error\": \"Access denied\"}");
-			return;
-		}
+        // Register tick event to constantly check config status
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            boolean configEnabled = PlayerCoordsAPI.getConfig().enabled;
 
-		// Get player coordinates
-		MinecraftClient client = MinecraftClient.getInstance();
-		PlayerEntity player = client.player;
-		
-		String responseText;
-		if (player != null) {
-			double x = player.getX();
-			double y = player.getY();
-			double z = player.getZ();
-			String world = player.getWorld().getRegistryKey().getValue().toString();
-			
-			// Get biome information
-			RegistryEntry<Biome> biomeEntry = player.getWorld().getBiome(player.getBlockPos());
-			String biome = biomeEntry.getKey().orElseThrow().getValue().toString();
-			
-			// Get player UUID and username
-			String uuid = player.getUuid().toString();
-			String username = player.getName().getString();
-			
-			// Format as JSON
-			responseText = String.format(
-				"{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
-				x, y, z, world, biome, uuid, username
-			);
-			sendResponse(exchange, 200, responseText);
-		} else {
-			sendResponse(exchange, 404, "{\"error\": \"Player not in world\"}");
-		}
-	}
-	
-	private void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
-		exchange.getResponseHeaders().set("Content-Type", "application/json");
-		exchange.sendResponseHeaders(statusCode, response.length());
-		
-		try (OutputStream os = exchange.getResponseBody()) {
-			os.write(response.getBytes());
-		}
-	}
+            // If enabled and server not started, start server
+            if (configEnabled && !serverStarted) {
+                startServer();
+            }
+
+            // If disabled and server is running, stop server
+            if (!configEnabled && serverStarted) {
+                stopServer();
+            }
+        });
+
+        PlayerCoordsAPI.LOGGER.info("Registered config monitor");
+    }
+
+    private void startServer() {
+        if (serverStarted) return;
+
+        try {
+            PlayerCoordsAPI.LOGGER.info("Starting PlayerCoordsAPI HTTP server on port " + PORT);
+            server = HttpServer.create(new InetSocketAddress(PORT), 0);
+            server.createContext("/api/coords", this::handleCoordsRequest);
+            server.setExecutor(Executors.newSingleThreadExecutor());
+            server.start();
+            serverStarted = true;
+            PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server started successfully");
+        } catch (IOException e) {
+            PlayerCoordsAPI.LOGGER.error("Failed to start PlayerCoordsAPI HTTP server", e);
+        }
+    }
+
+    private void stopServer() {
+        if (server != null) {
+            PlayerCoordsAPI.LOGGER.info("Stopping PlayerCoordsAPI HTTP server");
+
+            // Create a separate thread to stop the server to prevent blocking
+            final HttpServer serverToStop = server; // Create a final reference for the thread
+            Thread stopThread = new Thread(() -> {
+                serverToStop.stop(0); // Stop with no delay
+                PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server stopped successfully");
+            });
+            stopThread.setDaemon(true);
+            stopThread.start();
+
+            // Set variables immediately so we know the server is being stopped
+            server = null;
+            serverStarted = false;
+        }
+    }
+
+    private void handleCoordsRequest(HttpExchange exchange) throws IOException {
+        // Handle CORS preflight request
+        if (exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+            sendResponse(exchange, 204, null);
+            return;
+        }
+
+        // Check if the client is allowed to access (only localhost)
+        String remoteAddress = exchange.getRemoteAddress().getAddress().getHostAddress();
+        if (!remoteAddress.equals("127.0.0.1") && !remoteAddress.equals("0:0:0:0:0:0:0:1")) {
+            sendResponse(exchange, 403, "{\"error\": \"Access denied\"}");
+            return;
+        }
+
+        // Get player coordinates
+        MinecraftClient client = MinecraftClient.getInstance();
+        PlayerEntity player = client.player;
+
+        String responseText;
+        if (player != null) {
+            double x = player.getX();
+            double y = player.getY();
+            double z = player.getZ();
+            String world = player.getWorld().getRegistryKey().getValue().toString();
+
+            // Get biome information
+            RegistryEntry<Biome> biomeEntry = player.getWorld().getBiome(player.getBlockPos());
+            String biome = biomeEntry.getKey().orElseThrow().getValue().toString();
+
+            // Get player UUID and username
+            String uuid = player.getUuid().toString();
+            String username = player.getName().getString();
+
+            // Format as JSON
+            responseText = String.format(
+                    "{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
+                    x, y, z, world, biome, uuid, username
+            );
+            sendResponse(exchange, 200, responseText);
+        } else {
+            sendResponse(exchange, 404, "{\"error\": \"Player not in world\"}");
+        }
+    }
+
+    private void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
+        // Add CORS headers
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        // Set content type if response is not null
+        if (response != null) {
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(statusCode, response.length());
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response.getBytes());
+            }
+        } else {
+            exchange.sendResponseHeaders(statusCode, -1); // No response body
+        }
+    }
 }

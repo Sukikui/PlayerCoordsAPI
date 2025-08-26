@@ -69,6 +69,7 @@ For security reasons, the API server:
 - Only accepts connections from localhost `127.0.0.1`
 - Runs on port `25565` by default
 - Provides read-only access to player position data
+- Allows requests from any origin (CORS `Access-Control-Allow-Origin: *`) for easy integration with web applications
 
 ## 🛠️ Examples
 
@@ -89,8 +90,8 @@ print(f"Player {data['username']} (UUID: {data['uuid']}) at X: {data['x']}, Y: {
 ### JavaScript
 ```javascript
 fetch("http://localhost:25565/api/coords")
-  .then(response => response.json())
-  .then(data => console.log(`Player ${data.username} (UUID: ${data.uuid}) at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
+    .then(response => response.json())
+    .then(data => console.log(`Player ${data.username} (UUID: ${data.uuid}) at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
 ```
 
 <div align="center">
