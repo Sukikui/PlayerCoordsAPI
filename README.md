@@ -89,8 +89,8 @@ print(f"Player {data['username']} (UUID: {data['uuid']}) at X: {data['x']}, Y: {
 ### JavaScript
 ```javascript
 fetch("http://localhost:25565/api/coords")
-  .then(response => response.json())
-  .then(data => console.log(`Player ${data.username} (UUID: ${data.uuid}) at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
+    .then(response => response.json())
+    .then(data => console.log(`Player ${data.username} (UUID: ${data.uuid}) at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
 ```
 
 <div align="center">
