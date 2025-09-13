@@ -12,6 +12,7 @@ import net.minecraft.world.biome.Biome;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 
 public class PlayerCoordsAPIClient implements ClientModInitializer {
@@ -113,8 +114,8 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
             String uuid = player.getUuid().toString();
             String username = player.getName().getString();
 
-            // Format as JSON
-            responseText = String.format(
+            // Format as JSON using US locale to ensure dots instead of commas
+            responseText = String.format(Locale.US,
                     "{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
                     x, y, z, world, biome, uuid, username
             );
