@@ -44,7 +44,7 @@ jobs:
           loaders: fabric quilt
 
       - name: 📝 Sync Modrinth description from README
-        uses: funnyboy-roks/modrinth-auto-desc@v1.6
+        uses: funnyboy-roks/modrinth-auto-desc@v1.7
         with:
           auth-token: ${{ secrets.MODRINTH_TOKEN }}
           slug: ZTxdoq6g
