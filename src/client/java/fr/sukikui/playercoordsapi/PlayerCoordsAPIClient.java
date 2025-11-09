@@ -114,10 +114,14 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
             String uuid = player.getUuid().toString();
             String username = player.getName().getString();
 
+            // Fetch pitch/yaw, note they are floats internally
+            float yaw = player.getYaw();
+            float pitch = player.getPitch();
+
             // Format as JSON using US locale to ensure dots instead of commas
             responseText = String.format(Locale.US,
-                    "{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
-                    x, y, z, world, biome, uuid, username
+                    "{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"yaw\": %.2f, \"pitch\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
+                    x, y, z, yaw, pitch, world, biome, uuid, username
             );
             sendResponse(exchange, 200, responseText);
         } else {

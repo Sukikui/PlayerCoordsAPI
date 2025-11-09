@@ -37,6 +37,8 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
   "x": 123.45,
   "y": 64.00,
   "z": -789.12,
+  "yaw": 180.00,
+  "pitch": 12.50,
   "world": "overworld",
   "biome": "plains",
   "uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -51,6 +53,8 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 | `x`        | `number` | East-West         |
 | `y`        | `number` | Height            |
 | `z`        | `number` | North-South       |
+| `yaw`      | `number` | Horizontal rotation (degrees) |
+| `pitch`    | `number` | Vertical rotation (degrees)   |
 | `world`    | `string` | Minecraft world   |
 | `biome`    | `string` | Minecraft biome   |
 | `uuid`     | `string` | Player UUID       |
@@ -94,8 +98,10 @@ fetch("http://localhost:25565/api/coords")
     .then(data => console.log(`Player ${data.username} (UUID: ${data.uuid}) at X: ${data.x}, Y: ${data.y}, Z: ${data.z}`));
 ```
 
+---
+
 <div align="center">
-Made with ❤️ by 
-<img src="https://crafatar.com/avatars/7d2159e810514c3eb504c279cadd4273?size=100&overlay" width="20" height="20" style="vertical-align: -3px;"> 
+Crafted by
+<img src="https://starlightskins.lunareclipse.studio/render/head/_Suki_/full?borderHighlight=true&borderHighlightRadius=7&dropShadow=true" width="20" height="20" style="vertical-align:-3px;">
 Sukikui
 </div>
