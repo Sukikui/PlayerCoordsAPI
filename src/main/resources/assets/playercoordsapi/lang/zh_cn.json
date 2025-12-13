@@ -1,0 +1,5 @@
+{
+  "text.autoconfig.playercoordsapi.title": "PlayerCoordsAPI",
+  "text.autoconfig.playercoordsapi.option.enabled": "启用模组",
+  "text.autoconfig.playercoordsapi.option.enabled.@Tooltip": "启用或禁用 PlayerCoordsAPI"
+}
