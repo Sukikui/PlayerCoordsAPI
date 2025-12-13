@@ -1,4 +1,9 @@
 pluginManagement {
+	def loomVersion = providers.gradleProperty("loom_version").orElse(null)
+	if (loomVersion == null) {
+		throw new GradleException("Missing 'loom_version' in gradle.properties")
+	}
+
 	repositories {
 		maven {
 			name = 'Fabric'
@@ -6,5 +11,8 @@ pluginManagement {
 		}
 		mavenCentral()
 		gradlePluginPortal()
+	}
+	plugins {
+		id "fabric-loom" version loomVersion
 	}
 }
