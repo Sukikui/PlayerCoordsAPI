@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.10-SNAPSHOT'
+	id 'fabric-loom'
 	id 'maven-publish'
 }
 
@@ -54,10 +54,23 @@ dependencies {
 }
 
 processResources {
+	// Keep fabric.mod.json versions in sync with gradle.properties
 	inputs.property "version", project.version
+	inputs.property "loader_version", project.loader_version
+	inputs.property "minecraft_version", project.minecraft_version
+	inputs.property "fabric_version", project.fabric_version
+	inputs.property "cloth_config_version", project.cloth_config_version
+	inputs.property "modmenu_version", project.modmenu_version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": inputs.properties.version
+		expand(
+			"version": inputs.properties.version,
+			"loader_version": inputs.properties.loader_version,
+			"minecraft_version": inputs.properties.minecraft_version,
+			"fabric_version": inputs.properties.fabric_version,
+			"cloth_config_version": inputs.properties.cloth_config_version,
+			"modmenu_version": inputs.properties.modmenu_version
+		)
 	}
 }
 

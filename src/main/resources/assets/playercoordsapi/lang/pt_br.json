@@ -1,0 +1,5 @@
+{
+  "text.autoconfig.playercoordsapi.title": "PlayerCoordsAPI",
+  "text.autoconfig.playercoordsapi.option.enabled": "Ativar o mod",
+  "text.autoconfig.playercoordsapi.option.enabled.@Tooltip": "Ativar ou desativar o PlayerCoordsAPI"
+}

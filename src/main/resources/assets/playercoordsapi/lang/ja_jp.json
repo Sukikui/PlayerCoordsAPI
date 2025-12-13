@@ -1,0 +1,5 @@
+{
+  "text.autoconfig.playercoordsapi.title": "PlayerCoordsAPI",
+  "text.autoconfig.playercoordsapi.option.enabled": "Modを有効にする",
+  "text.autoconfig.playercoordsapi.option.enabled.@Tooltip": "PlayerCoordsAPIを有効または無効にします"
+}
