@@ -34,14 +34,14 @@
 		}
 	],
 	"depends": {
-		"fabricloader": ">=0.16.14",
-		"minecraft": "~1.21.8",
+		"fabricloader": ">=0.18.2",
+		"minecraft": "~1.21.11",
 		"java": ">=21",
 		"fabric-api": "*",
-		"cloth-config": ">=13.0.0"
+		"cloth-config": ">=21.11.151"
 	},
 	"recommends": {
-		"modmenu": ">=9.0.0"
+		"modmenu": ">=17.0.0-alpha.1"
 	},
 	"suggests": {
 		"another-mod": "*"
