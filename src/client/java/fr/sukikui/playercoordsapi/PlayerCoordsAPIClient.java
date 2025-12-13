@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpServer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.world.biome.Biome;
@@ -98,16 +99,17 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         // Get player coordinates
         MinecraftClient client = MinecraftClient.getInstance();
         PlayerEntity player = client.player;
+        ClientWorld worldObj = client.world;
 
         String responseText;
-        if (player != null) {
+        if (player != null && worldObj != null) {
             double x = player.getX();
             double y = player.getY();
             double z = player.getZ();
-            String world = player.getWorld().getRegistryKey().getValue().toString();
+            String world = worldObj.getRegistryKey().getValue().toString();
 
             // Get biome information
-            RegistryEntry<Biome> biomeEntry = player.getWorld().getBiome(player.getBlockPos());
+            RegistryEntry<Biome> biomeEntry = worldObj.getBiome(player.getBlockPos());
             String biome = biomeEntry.getKey().orElseThrow().getValue().toString();
 
             // Get player UUID and username
