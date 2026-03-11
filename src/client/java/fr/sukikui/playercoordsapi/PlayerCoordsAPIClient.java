@@ -164,9 +164,16 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
     }
 
     private void handleCoordsRequest(HttpExchange exchange) throws IOException {
-        // Handle CORS preflight request
-        if (exchange.getRequestMethod().equalsIgnoreCase("OPTIONS")) {
+        String method = exchange.getRequestMethod();
+
+        if (method.equalsIgnoreCase("OPTIONS")) {
             sendResponse(exchange, 204, null);
+            return;
+        }
+
+        if (!method.equalsIgnoreCase("GET")) {
+            exchange.getResponseHeaders().set("Allow", "GET, OPTIONS");
+            sendResponse(exchange, 405, "{\"error\": \"Method not allowed\"}");
             return;
         }
 
