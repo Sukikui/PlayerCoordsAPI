@@ -3,7 +3,10 @@ package fr.sukikui.playercoordsapi;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
@@ -46,6 +49,13 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
             }
         });
 
+        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> updateSnapshot(client));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearSnapshot());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            clearSnapshot();
+            stopServer();
+        });
+
         PlayerCoordsAPI.LOGGER.info("Registered config monitor");
     }
 
@@ -74,6 +84,10 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
                 player.getUuid().toString(),
                 player.getName().getString()
         );
+    }
+
+    private void clearSnapshot() {
+        latestSnapshot = null;
     }
 
     private void startServer() {
