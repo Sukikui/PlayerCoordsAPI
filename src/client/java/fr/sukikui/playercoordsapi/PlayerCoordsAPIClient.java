@@ -3,7 +3,10 @@ package fr.sukikui.playercoordsapi;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
@@ -19,6 +22,7 @@ import java.util.concurrent.Executors;
 public class PlayerCoordsAPIClient implements ClientModInitializer {
     private HttpServer server;
     private boolean serverStarted = false;
+    private volatile PlayerSnapshot latestSnapshot;
     // Hardcoded port value - no longer in config
     private static final int PORT = 25565;
 
@@ -31,6 +35,7 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
 
         // Register tick event to constantly check config status
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            updateSnapshot(client);
             boolean configEnabled = PlayerCoordsAPI.getConfig().enabled;
 
             // If enabled and server not started, start server
@@ -44,7 +49,45 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
             }
         });
 
+        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> updateSnapshot(client));
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearSnapshot());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            clearSnapshot();
+            stopServer();
+        });
+
         PlayerCoordsAPI.LOGGER.info("Registered config monitor");
+    }
+
+    private void updateSnapshot(MinecraftClient client) {
+        PlayerEntity player = client.player;
+        ClientWorld worldObj = client.world;
+
+        if (player == null || worldObj == null) {
+            latestSnapshot = null;
+            return;
+        }
+
+        RegistryEntry<Biome> biomeEntry = worldObj.getBiome(player.getBlockPos());
+        String biome = biomeEntry.getKey()
+                .map(key -> key.getValue().toString())
+                .orElse("unknown");
+
+        latestSnapshot = new PlayerSnapshot(
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                player.getYaw(),
+                player.getPitch(),
+                worldObj.getRegistryKey().getValue().toString(),
+                biome,
+                player.getUuid().toString(),
+                player.getName().getString()
+        );
+    }
+
+    private void clearSnapshot() {
+        latestSnapshot = null;
     }
 
     private void startServer() {
@@ -96,36 +139,9 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
             return;
         }
 
-        // Get player coordinates
-        MinecraftClient client = MinecraftClient.getInstance();
-        PlayerEntity player = client.player;
-        ClientWorld worldObj = client.world;
-
-        String responseText;
-        if (player != null && worldObj != null) {
-            double x = player.getX();
-            double y = player.getY();
-            double z = player.getZ();
-            String world = worldObj.getRegistryKey().getValue().toString();
-
-            // Get biome information
-            RegistryEntry<Biome> biomeEntry = worldObj.getBiome(player.getBlockPos());
-            String biome = biomeEntry.getKey().orElseThrow().getValue().toString();
-
-            // Get player UUID and username
-            String uuid = player.getUuid().toString();
-            String username = player.getName().getString();
-
-            // Fetch pitch/yaw, note they are floats internally
-            float yaw = player.getYaw();
-            float pitch = player.getPitch();
-
-            // Format as JSON using US locale to ensure dots instead of commas
-            responseText = String.format(Locale.US,
-                    "{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"yaw\": %.2f, \"pitch\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
-                    x, y, z, yaw, pitch, world, biome, uuid, username
-            );
-            sendResponse(exchange, 200, responseText);
+        PlayerSnapshot snapshot = latestSnapshot;
+        if (snapshot != null) {
+            sendResponse(exchange, 200, snapshot.toJson());
         } else {
             sendResponse(exchange, 404, "{\"error\": \"Player not in world\"}");
         }
@@ -146,6 +162,25 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
             }
         } else {
             exchange.sendResponseHeaders(statusCode, -1); // No response body
+        }
+    }
+
+    private record PlayerSnapshot(
+            double x,
+            double y,
+            double z,
+            float yaw,
+            float pitch,
+            String world,
+            String biome,
+            String uuid,
+            String username
+    ) {
+        private String toJson() {
+            return String.format(Locale.US,
+                    "{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"yaw\": %.2f, \"pitch\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
+                    x, y, z, yaw, pitch, world, biome, uuid, username
+            );
         }
     }
 }
