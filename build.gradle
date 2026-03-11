@@ -20,7 +20,7 @@ repositories {
 		name = "Terraformers"
 		url = "https://maven.terraformersmc.com/releases" // Mod Menu repo requires explicit releases path on CI
 	}
-	maven { url "https://maven.shedaniel.me/" } // Cloth Config
+	maven { url = "https://maven.shedaniel.me/" } // Cloth Config
 }
 
 loom {
