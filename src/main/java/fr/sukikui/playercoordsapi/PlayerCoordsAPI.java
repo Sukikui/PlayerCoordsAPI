@@ -28,7 +28,7 @@ public class PlayerCoordsAPI implements ModInitializer {
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 
-		LOGGER.info("PlayerCoordsAPI initialized - API will be available at http://localhost:25565/api when enabled");
+		LOGGER.info("PlayerCoordsAPI initialized - API will be available at http://localhost:25565/api/coords when enabled");
 	}
 	
 	public static ModConfig getConfig() {

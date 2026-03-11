@@ -15,38 +15,35 @@ import net.minecraft.world.biome.Biome;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class PlayerCoordsAPIClient implements ClientModInitializer {
-    private HttpServer server;
-    private boolean serverStarted = false;
-    private volatile PlayerSnapshot latestSnapshot;
-    // Hardcoded port value - no longer in config
     private static final int PORT = 25565;
+    private static final long START_RETRY_DELAY_MS = 5_000L;
+
+    private HttpServer server;
+    private ExecutorService serverExecutor;
+    private boolean serverStarted = false;
+    private boolean lastConfigEnabled;
+    private long nextStartAttemptAt = 0L;
+    private volatile PlayerSnapshot latestSnapshot;
 
     @Override
     public void onInitializeClient() {
-        // Start server on init if enabled
-        if (PlayerCoordsAPI.getConfig().enabled) {
-            startServer();
+        lastConfigEnabled = PlayerCoordsAPI.getConfig().enabled;
+
+        if (lastConfigEnabled) {
+            tryStartServer();
         }
 
-        // Register tick event to constantly check config status
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             updateSnapshot(client);
-            boolean configEnabled = PlayerCoordsAPI.getConfig().enabled;
-
-            // If enabled and server not started, start server
-            if (configEnabled && !serverStarted) {
-                startServer();
-            }
-
-            // If disabled and server is running, stop server
-            if (!configEnabled && serverStarted) {
-                stopServer();
-            }
+            handleConfigState(PlayerCoordsAPI.getConfig().enabled);
         });
 
         ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> updateSnapshot(client));
@@ -57,6 +54,26 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         });
 
         PlayerCoordsAPI.LOGGER.info("Registered config monitor");
+    }
+
+    private void handleConfigState(boolean configEnabled) {
+        if (configEnabled != lastConfigEnabled) {
+            lastConfigEnabled = configEnabled;
+
+            if (configEnabled) {
+                nextStartAttemptAt = 0L;
+                tryStartServer();
+            } else {
+                nextStartAttemptAt = 0L;
+                stopServer();
+            }
+
+            return;
+        }
+
+        if (configEnabled && !serverStarted) {
+            tryStartServer();
+        }
     }
 
     private void updateSnapshot(MinecraftClient client) {
@@ -81,7 +98,7 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
                 player.getPitch(),
                 worldObj.getRegistryKey().getValue().toString(),
                 biome,
-                player.getUuid().toString(),
+                player.getUuidAsString(),
                 player.getName().getString()
         );
     }
@@ -90,39 +107,60 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         latestSnapshot = null;
     }
 
-    private void startServer() {
-        if (serverStarted) return;
+    private void tryStartServer() {
+        if (serverStarted) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+
+        if (now < nextStartAttemptAt) {
+            return;
+        }
 
         try {
             PlayerCoordsAPI.LOGGER.info("Starting PlayerCoordsAPI HTTP server on port " + PORT);
-            server = HttpServer.create(new InetSocketAddress(PORT), 0);
+            server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), PORT), 0);
             server.createContext("/api/coords", this::handleCoordsRequest);
-            server.setExecutor(Executors.newSingleThreadExecutor());
+            serverExecutor = Executors.newSingleThreadExecutor();
+            server.setExecutor(serverExecutor);
             server.start();
             serverStarted = true;
+            nextStartAttemptAt = 0L;
             PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server started successfully");
         } catch (IOException e) {
-            PlayerCoordsAPI.LOGGER.error("Failed to start PlayerCoordsAPI HTTP server", e);
+            cleanupServerResources();
+            nextStartAttemptAt = now + START_RETRY_DELAY_MS;
+            PlayerCoordsAPI.LOGGER.warn(
+                    "Failed to start PlayerCoordsAPI HTTP server, retrying in {} seconds",
+                    START_RETRY_DELAY_MS / 1000,
+                    e
+            );
         }
     }
 
     private void stopServer() {
-        if (server != null) {
-            PlayerCoordsAPI.LOGGER.info("Stopping PlayerCoordsAPI HTTP server");
-
-            // Create a separate thread to stop the server to prevent blocking
-            final HttpServer serverToStop = server; // Create a final reference for the thread
-            Thread stopThread = new Thread(() -> {
-                serverToStop.stop(0); // Stop with no delay
-                PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server stopped successfully");
-            });
-            stopThread.setDaemon(true);
-            stopThread.start();
-
-            // Set variables immediately so we know the server is being stopped
-            server = null;
-            serverStarted = false;
+        if (server == null && serverExecutor == null) {
+            return;
         }
+
+        PlayerCoordsAPI.LOGGER.info("Stopping PlayerCoordsAPI HTTP server");
+        cleanupServerResources();
+        PlayerCoordsAPI.LOGGER.info("PlayerCoordsAPI HTTP server stopped successfully");
+    }
+
+    private void cleanupServerResources() {
+        if (server != null) {
+            server.stop(0);
+            server = null;
+        }
+
+        if (serverExecutor != null) {
+            serverExecutor.shutdown();
+            serverExecutor = null;
+        }
+
+        serverStarted = false;
     }
 
     private void handleCoordsRequest(HttpExchange exchange) throws IOException {
@@ -133,8 +171,8 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         }
 
         // Check if the client is allowed to access (only localhost)
-        String remoteAddress = exchange.getRemoteAddress().getAddress().getHostAddress();
-        if (!remoteAddress.equals("127.0.0.1") && !remoteAddress.equals("0:0:0:0:0:0:0:1")) {
+        InetAddress remoteAddress = exchange.getRemoteAddress().getAddress();
+        if (remoteAddress == null || !remoteAddress.isLoopbackAddress()) {
             sendResponse(exchange, 403, "{\"error\": \"Access denied\"}");
             return;
         }
@@ -153,16 +191,43 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
         exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-        // Set content type if response is not null
         if (response != null) {
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(statusCode, response.length());
+            byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+            exchange.sendResponseHeaders(statusCode, responseBytes.length);
             try (OutputStream os = exchange.getResponseBody()) {
-                os.write(response.getBytes());
+                os.write(responseBytes);
             }
         } else {
-            exchange.sendResponseHeaders(statusCode, -1); // No response body
+            exchange.sendResponseHeaders(statusCode, -1);
         }
+    }
+
+    private static String escapeJson(String value) {
+        StringBuilder escaped = new StringBuilder(value.length() + 16);
+
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+
+            switch (ch) {
+                case '\\' -> escaped.append("\\\\");
+                case '"' -> escaped.append("\\\"");
+                case '\b' -> escaped.append("\\b");
+                case '\f' -> escaped.append("\\f");
+                case '\n' -> escaped.append("\\n");
+                case '\r' -> escaped.append("\\r");
+                case '\t' -> escaped.append("\\t");
+                default -> {
+                    if (ch < 0x20) {
+                        escaped.append(String.format(Locale.ROOT, "\\u%04x", (int) ch));
+                    } else {
+                        escaped.append(ch);
+                    }
+                }
+            }
+        }
+
+        return escaped.toString();
     }
 
     private record PlayerSnapshot(
@@ -179,7 +244,15 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         private String toJson() {
             return String.format(Locale.US,
                     "{\"x\": %.2f, \"y\": %.2f, \"z\": %.2f, \"yaw\": %.2f, \"pitch\": %.2f, \"world\": \"%s\", \"biome\": \"%s\", \"uuid\": \"%s\", \"username\": \"%s\"}",
-                    x, y, z, yaw, pitch, world, biome, uuid, username
+                    x,
+                    y,
+                    z,
+                    yaw,
+                    pitch,
+                    escapeJson(world),
+                    escapeJson(biome),
+                    escapeJson(uuid),
+                    escapeJson(username)
             );
         }
     }
