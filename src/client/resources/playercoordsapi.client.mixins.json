@@ -2,9 +2,7 @@
 	"required": true,
 	"package": "fr.sukikui.playercoordsapi.mixin.client",
 	"compatibilityLevel": "JAVA_21",
-	"client": [
-		"PlayerCoordsAPIClientMixin"
-	],
+	"client": [],
 	"injectors": {
 		"defaultRequire": 1
 	}
