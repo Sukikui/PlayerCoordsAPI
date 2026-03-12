@@ -18,7 +18,7 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 - Lightweight HTTP server running only on localhost providing your coordinates
 - Client-side only - no server-side components needed
 - Works in singleplayer and multiplayer
-- Mod menu integration allowing you to enable/disable the API and configure CORS
+- Mod menu integration allowing you to enable/disable the API, change its port, and configure requests with or without an `Origin` header
 
 ## 🚀 Installation
 
@@ -27,27 +27,27 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 3. Place the jar in your `.minecraft/mods` folder
 4. Launch Minecraft with the Fabric profile
 
+## ⚙️ Configuration
+
+The API is read-only and only accepts loopback connections such as `127.0.0.1` and `::1`.
+From Mod Menu, you can configure:
+- Whether the API is enabled
+- Which port it listens on (default: `25565`)
+- How requests without a CORS `Origin` header are handled
+- How requests with a CORS `Origin` header are handled
+
+Requests with an `Origin` can be handled in three different modes:
+- `Allow all`
+- `Local origins`
+- `Whitelist`
+
+In `Whitelist` mode, you can configure each allowed origin with a scheme, host/IP, and optional port.
+
 ## 🔌 API Usage
 
-| Endpoint      | Method | Description                                              |
-|---------------|--------|----------------------------------------------------------|
-| `/api/coords` | `GET`  | Returns the player's current coordinates and world infos |
-
-### Response Format
-
-```json
-{
-  "x": 123.45,
-  "y": 64.00,
-  "z": -789.12,
-  "yaw": 180.00,
-  "pitch": 12.50,
-  "world": "minecraft:overworld",
-  "biome": "minecraft:plains",
-  "uuid": "550e8400-e29b-41d4-a716-446655440000",
-  "username": "PlayerName"
-}
-```
+| Endpoint      | Method          | Description                                              |
+|---------------|-----------------|----------------------------------------------------------|
+| `/api/coords` | `GET`, `OPTIONS` | Returns the player's current coordinates and world infos |
 
 ### Response Fields
 
@@ -71,15 +71,25 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 | `404`  | Player not in world |
 | `405`  | Method not allowed  |
 
-## 🔒 Security
+### Response Format Example
 
-For security reasons, the API server:
-- Only accepts connections from loopback addresses such as `127.0.0.1` and `::1`
-- Runs on port `25565` by default
-- Provides read-only access to player position data
-- Uses a configurable CORS policy. By default it allows all origins for backward compatibility, but you can restrict it in the config screen
+```json
+{
+  "x": 123.45,
+  "y": 64.00,
+  "z": -789.12,
+  "yaw": 180.00,
+  "pitch": 12.50,
+  "world": "minecraft:overworld",
+  "biome": "minecraft:plains",
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "PlayerName"
+}
+```
 
 ## 🛠️ Examples
+
+Replace `25565` with your configured port if you changed it in the Mod Menu.
 
 ### cURL
 ```bash

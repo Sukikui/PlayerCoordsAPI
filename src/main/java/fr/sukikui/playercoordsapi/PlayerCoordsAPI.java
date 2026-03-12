@@ -1,6 +1,5 @@
 package fr.sukikui.playercoordsapi;
 
-import fr.sukikui.playercoordsapi.config.CorsUtils;
 import fr.sukikui.playercoordsapi.config.ModConfig;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.JanksonConfigSerializer;
@@ -8,50 +7,30 @@ import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Main mod entrypoint responsible for registering and sanitizing the shared config.
+ */
 public class PlayerCoordsAPI implements ModInitializer {
 	public static final String MOD_ID = "playercoordsapi";
-
-	// This logger is used to write text to the console and the log file.
-	// It is considered best practice to use your mod id as the logger's name.
-	// That way, it's clear which mod wrote info, warnings, and errors.
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	
-	// Config instance
 	private static ModConfig config;
 
+	/**
+	 * Registers the config serializer and normalizes persisted values once at startup.
+	 */
 	@Override
 	public void onInitialize() {
-		// Register config
 		AutoConfig.register(ModConfig.class, JanksonConfigSerializer::new);
 		config = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
+		config.sanitize();
+		AutoConfig.getConfigHolder(ModConfig.class).save();
 
-		if (config.corsPolicy == null) {
-			config.corsPolicy = ModConfig.CorsPolicy.ALLOW_ALL;
-		}
-
-		if (config.allowedOrigins == null) {
-			config.allowedOrigins = new java.util.ArrayList<>(ModConfig.DEFAULT_ALLOWED_ORIGINS);
-		}
-
-		if (config.originEntries == null) {
-			config.originEntries = new java.util.ArrayList<>();
-		}
-
-		if (config.originEntries.isEmpty() && !config.allowedOrigins.isEmpty()) {
-			config.originEntries = CorsUtils.createConfiguredOriginEntries(config.allowedOrigins);
-		}
-
-		config.allowedOrigins = config.originEntries.isEmpty()
-				? CorsUtils.normalizeConfiguredOrigins(config.allowedOrigins)
-				: CorsUtils.normalizeConfiguredOriginsFromEntries(config.originEntries);
-
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
-
-		LOGGER.info("PlayerCoordsAPI initialized - API will be available at http://localhost:25565/api/coords when enabled");
+		LOGGER.info("PlayerCoordsAPI initialized - API will be available at http://localhost:{}/api/coords when enabled", config.apiPort);
 	}
 	
+	/**
+	 * Returns the shared mutable config instance managed by AutoConfig.
+	 */
 	public static ModConfig getConfig() {
 		return config;
 	}

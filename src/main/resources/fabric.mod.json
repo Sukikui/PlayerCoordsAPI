@@ -42,8 +42,5 @@
 	},
 	"recommends": {
 		"modmenu": ">=${modmenu_version}"
-	},
-	"suggests": {
-		"another-mod": "*"
 	}
 }

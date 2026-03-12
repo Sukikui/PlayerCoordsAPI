@@ -7,10 +7,13 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Locale;
 
+/**
+ * Utility methods for normalizing, validating, and comparing configured origins.
+ */
 public final class CorsUtils {
     private static final String HTTP_SCHEME = "http";
     private static final String HTTPS_SCHEME = "https";
@@ -18,14 +21,23 @@ public final class CorsUtils {
     private CorsUtils() {
     }
 
+    /**
+     * Normalizes a request {@code Origin} header if it is valid.
+     */
     public static Optional<String> normalizeOrigin(String rawOrigin) {
         return normalizeOrigin(rawOrigin, false);
     }
 
+    /**
+     * Normalizes a configured origin, allowing implicit scheme inference.
+     */
     public static Optional<String> normalizeConfiguredOrigin(String rawOrigin) {
         return normalizeOrigin(rawOrigin, true);
     }
 
+    /**
+     * Builds and normalizes an origin from split host, port, and scheme-mode fields.
+     */
     public static Optional<String> normalizeConfiguredOrigin(String host, String port, ModConfig.OriginSchemeMode schemeMode) {
         String authority = buildAuthority(host, port);
 
@@ -40,6 +52,9 @@ public final class CorsUtils {
         };
     }
 
+    /**
+     * Validates and canonicalizes an origin string.
+     */
     private static Optional<String> normalizeOrigin(String rawOrigin, boolean allowImplicitScheme) {
         if (rawOrigin == null) {
             return Optional.empty();
@@ -111,6 +126,9 @@ public final class CorsUtils {
         return Optional.of(normalizedScheme + "://" + hostForOutput + ":" + port);
     }
 
+    /**
+     * Infers a scheme for configured origins that omit one.
+     */
     private static Optional<String> inferOriginWithScheme(String rawOrigin) {
         String authority = prepareAuthority(rawOrigin);
         URI authorityUri;
@@ -131,6 +149,9 @@ public final class CorsUtils {
         return Optional.of(inferredScheme + "://" + authority);
     }
 
+    /**
+     * Converts raw host input into a URI authority, wrapping plain IPv6 addresses when needed.
+     */
     private static String prepareAuthority(String rawOrigin) {
         String authority = rawOrigin.startsWith("//") ? rawOrigin.substring(2) : rawOrigin;
 
@@ -141,6 +162,9 @@ public final class CorsUtils {
         return authority;
     }
 
+    /**
+     * Returns whether a host string points to a loopback address.
+     */
     private static boolean isLoopbackHost(String host) {
         String normalizedHost = stripIpv6Brackets(host).toLowerCase(Locale.ROOT);
 
@@ -150,6 +174,9 @@ public final class CorsUtils {
                 || normalizedHost.startsWith("127.");
     }
 
+    /**
+     * Infers the default scheme to use for configured authorities without one.
+     */
     private static String inferScheme(String host, int port) {
         if (port == 80) {
             return HTTP_SCHEME;
@@ -162,6 +189,9 @@ public final class CorsUtils {
         return isLoopbackHost(host) ? HTTP_SCHEME : HTTPS_SCHEME;
     }
 
+    /**
+     * Builds a normalized authority string from the UI host/port inputs.
+     */
     private static String buildAuthority(String host, String port) {
         String trimmedHost = host == null ? "" : host.trim();
 
@@ -194,6 +224,9 @@ public final class CorsUtils {
         return authorityHost + ":" + trimmedPort;
     }
 
+    /**
+     * Removes square brackets from IPv6 literals when present.
+     */
     private static String stripIpv6Brackets(String host) {
         if (host == null) {
             return null;
@@ -206,6 +239,9 @@ public final class CorsUtils {
         return host;
     }
 
+    /**
+     * Checks whether the given origin is allowed by the current policy.
+     */
     public static boolean isOriginAllowed(ModConfig config, String origin) {
         Optional<String> normalizedOrigin = normalizeOrigin(origin);
         ModConfig.CorsPolicy corsPolicy = config.corsPolicy == null
@@ -226,6 +262,9 @@ public final class CorsUtils {
         };
     }
 
+    /**
+     * Resolves whether an origin points to a loopback host after normalization.
+     */
     public static boolean isLoopbackOrigin(String origin) {
         Optional<String> normalizedOrigin = normalizeOrigin(origin);
 
@@ -251,6 +290,9 @@ public final class CorsUtils {
         }
     }
 
+    /**
+     * Normalizes and deduplicates a persisted list of origin strings.
+     */
     public static List<String> normalizeConfiguredOrigins(List<String> origins) {
         Set<String> normalizedOrigins = new LinkedHashSet<>();
 
@@ -261,6 +303,9 @@ public final class CorsUtils {
         return new ArrayList<>(normalizedOrigins);
     }
 
+    /**
+     * Normalizes and deduplicates the origin list represented by config entries.
+     */
     public static List<String> normalizeConfiguredOriginsFromEntries(List<ModConfig.OriginEntry> originEntries) {
         Set<String> normalizedOrigins = new LinkedHashSet<>();
 
@@ -276,6 +321,9 @@ public final class CorsUtils {
         return new ArrayList<>(normalizedOrigins);
     }
 
+    /**
+     * Converts normalized origin strings into editable config entries.
+     */
     public static List<ModConfig.OriginEntry> createConfiguredOriginEntries(List<String> origins) {
         List<ModConfig.OriginEntry> originEntries = new ArrayList<>();
 
@@ -286,6 +334,9 @@ public final class CorsUtils {
         return originEntries;
     }
 
+    /**
+     * Converts a single normalized origin string into an editable config entry.
+     */
     public static Optional<ModConfig.OriginEntry> createConfiguredOriginEntry(String origin) {
         Optional<String> normalizedOrigin = normalizeOrigin(origin);
 
@@ -317,19 +368,5 @@ public final class CorsUtils {
         } catch (URISyntaxException e) {
             return Optional.empty();
         }
-    }
-
-    public static boolean hasDuplicateOrigins(List<String> origins) {
-        Set<String> normalizedOrigins = new LinkedHashSet<>();
-
-        for (String origin : origins) {
-            Optional<String> normalizedOrigin = normalizeConfiguredOrigin(origin);
-
-            if (normalizedOrigin.isPresent() && !normalizedOrigins.add(normalizedOrigin.get())) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
