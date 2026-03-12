@@ -1,5 +1,22 @@
 {
   "text.autoconfig.playercoordsapi.title": "PlayerCoordsAPI",
-  "text.autoconfig.playercoordsapi.option.enabled": "Abilita mod",
-  "text.autoconfig.playercoordsapi.option.enabled.@Tooltip": "Abilita o disabilita PlayerCoordsAPI"
+  "config.playercoordsapi.option.enabled": "Attiva mod",
+  "config.playercoordsapi.option.cors_policy": "Criterio CORS",
+  "config.playercoordsapi.option.cors_policy.allow_all": "Consenti tutto",
+  "config.playercoordsapi.option.cors_policy.local_web_apps_only": "Solo applicazioni web locali",
+  "config.playercoordsapi.option.cors_policy.custom_whitelist": "Whitelist personalizzata",
+  "config.playercoordsapi.option.allowed_origins": "Origini consentite",
+  "config.playercoordsapi.option.add_origin": "Aggiungi origine consentita",
+  "config.playercoordsapi.option.origin_scheme": "Schema",
+  "config.playercoordsapi.option.origin_scheme.auto": "Auto",
+  "config.playercoordsapi.option.origin_scheme.http": "HTTP",
+  "config.playercoordsapi.option.origin_scheme.https": "HTTPS",
+  "config.playercoordsapi.option.origin_host": "Host / IP",
+  "config.playercoordsapi.option.origin_host.tooltip": "Nome host o indirizzo IP, per esempio localhost o example.com.",
+  "config.playercoordsapi.option.origin_port": "Porta",
+  "config.playercoordsapi.option.origin_port.tooltip": "Porta facoltativa, per esempio 3000. Lasciala vuota per usare la porta predefinita.",
+  "config.playercoordsapi.option.allowed_origins.disabled": "Imposta la politica CORS su Whitelist personalizzata per modificare questa lista.",
+  "config.playercoordsapi.option.allowed_origins.error.invalid": "Inserisci un'origine valida.",
+  "config.playercoordsapi.option.allowed_origins.error.empty": "Aggiungi almeno un'origine.",
+  "config.playercoordsapi.option.allowed_origins.error.duplicate": "Rimuovi le origini duplicate."
 }

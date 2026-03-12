@@ -2,6 +2,8 @@ package fr.sukikui.playercoordsapi;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import fr.sukikui.playercoordsapi.config.CorsUtils;
+import fr.sukikui.playercoordsapi.config.ModConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -25,6 +27,8 @@ import java.util.concurrent.Executors;
 public class PlayerCoordsAPIClient implements ClientModInitializer {
     private static final int PORT = 25565;
     private static final long START_RETRY_DELAY_MS = 5_000L;
+    private static final String ALLOWED_METHODS = "GET, OPTIONS";
+    private static final String DEFAULT_ALLOWED_HEADERS = "Content-Type, Authorization";
 
     private HttpServer server;
     private ExecutorService serverExecutor;
@@ -164,39 +168,81 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
     }
 
     private void handleCoordsRequest(HttpExchange exchange) throws IOException {
+        InetAddress remoteAddress = exchange.getRemoteAddress().getAddress();
+        if (remoteAddress == null || !remoteAddress.isLoopbackAddress()) {
+            sendResponse(exchange, 403, "{\"error\": \"Access denied\"}", CorsDecision.noCors());
+            return;
+        }
+
+        CorsDecision corsDecision = evaluateCorsDecision(exchange);
+        if (!corsDecision.allowed()) {
+            sendResponse(exchange, 403, "{\"error\": \"Origin not allowed\"}", CorsDecision.noCors());
+            return;
+        }
+
         String method = exchange.getRequestMethod();
 
         if (method.equalsIgnoreCase("OPTIONS")) {
-            sendResponse(exchange, 204, null);
+            sendResponse(exchange, 204, null, corsDecision);
             return;
         }
 
         if (!method.equalsIgnoreCase("GET")) {
-            exchange.getResponseHeaders().set("Allow", "GET, OPTIONS");
-            sendResponse(exchange, 405, "{\"error\": \"Method not allowed\"}");
-            return;
-        }
-
-        // Check if the client is allowed to access (only localhost)
-        InetAddress remoteAddress = exchange.getRemoteAddress().getAddress();
-        if (remoteAddress == null || !remoteAddress.isLoopbackAddress()) {
-            sendResponse(exchange, 403, "{\"error\": \"Access denied\"}");
+            exchange.getResponseHeaders().set("Allow", ALLOWED_METHODS);
+            sendResponse(exchange, 405, "{\"error\": \"Method not allowed\"}", corsDecision);
             return;
         }
 
         PlayerSnapshot snapshot = latestSnapshot;
         if (snapshot != null) {
-            sendResponse(exchange, 200, snapshot.toJson());
+            sendResponse(exchange, 200, snapshot.toJson(), corsDecision);
         } else {
-            sendResponse(exchange, 404, "{\"error\": \"Player not in world\"}");
+            sendResponse(exchange, 404, "{\"error\": \"Player not in world\"}", corsDecision);
         }
     }
 
-    private void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
-        // Add CORS headers
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    private CorsDecision evaluateCorsDecision(HttpExchange exchange) {
+        ModConfig config = PlayerCoordsAPI.getConfig();
+
+        if (config.corsPolicy == ModConfig.CorsPolicy.ALLOW_ALL) {
+            return CorsDecision.allowed("*", resolveAllowedHeaders(exchange), false);
+        }
+
+        String requestOrigin = exchange.getRequestHeaders().getFirst("Origin");
+
+        if (requestOrigin == null || requestOrigin.isBlank()) {
+            return CorsDecision.noCors();
+        }
+
+        if (!CorsUtils.isOriginAllowed(config, requestOrigin)) {
+            return CorsDecision.denied();
+        }
+
+        return CorsUtils.normalizeOrigin(requestOrigin)
+                .map(origin -> CorsDecision.allowed(origin, resolveAllowedHeaders(exchange), true))
+                .orElseGet(CorsDecision::denied);
+    }
+
+    private String resolveAllowedHeaders(HttpExchange exchange) {
+        String requestedHeaders = exchange.getRequestHeaders().getFirst("Access-Control-Request-Headers");
+
+        if (requestedHeaders == null || requestedHeaders.isBlank()) {
+            return DEFAULT_ALLOWED_HEADERS;
+        }
+
+        return requestedHeaders;
+    }
+
+    private void sendResponse(HttpExchange exchange, int statusCode, String response, CorsDecision corsDecision) throws IOException {
+        if (corsDecision.allowOrigin() != null) {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", corsDecision.allowOrigin());
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", ALLOWED_METHODS);
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", corsDecision.allowHeaders());
+
+            if (corsDecision.varyByOrigin()) {
+                exchange.getResponseHeaders().set("Vary", "Origin, Access-Control-Request-Headers");
+            }
+        }
 
         if (response != null) {
             byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
@@ -235,6 +281,20 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         }
 
         return escaped.toString();
+    }
+
+    private record CorsDecision(boolean allowed, String allowOrigin, String allowHeaders, boolean varyByOrigin) {
+        private static CorsDecision allowed(String allowOrigin, String allowHeaders, boolean varyByOrigin) {
+            return new CorsDecision(true, allowOrigin, allowHeaders, varyByOrigin);
+        }
+
+        private static CorsDecision denied() {
+            return new CorsDecision(false, null, null, false);
+        }
+
+        private static CorsDecision noCors() {
+            return new CorsDecision(true, null, null, false);
+        }
     }
 
     private record PlayerSnapshot(
