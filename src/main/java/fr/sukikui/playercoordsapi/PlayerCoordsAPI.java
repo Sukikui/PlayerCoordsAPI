@@ -1,5 +1,6 @@
 package fr.sukikui.playercoordsapi;
 
+import fr.sukikui.playercoordsapi.config.CorsUtils;
 import fr.sukikui.playercoordsapi.config.ModConfig;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.serializer.JanksonConfigSerializer;
@@ -23,6 +24,26 @@ public class PlayerCoordsAPI implements ModInitializer {
 		// Register config
 		AutoConfig.register(ModConfig.class, JanksonConfigSerializer::new);
 		config = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
+
+		if (config.corsPolicy == null) {
+			config.corsPolicy = ModConfig.CorsPolicy.ALLOW_ALL;
+		}
+
+		if (config.allowedOrigins == null) {
+			config.allowedOrigins = new java.util.ArrayList<>(ModConfig.DEFAULT_ALLOWED_ORIGINS);
+		}
+
+		if (config.originEntries == null) {
+			config.originEntries = new java.util.ArrayList<>();
+		}
+
+		if (config.originEntries.isEmpty() && !config.allowedOrigins.isEmpty()) {
+			config.originEntries = CorsUtils.createConfiguredOriginEntries(config.allowedOrigins);
+		}
+
+		config.allowedOrigins = config.originEntries.isEmpty()
+				? CorsUtils.normalizeConfiguredOrigins(config.allowedOrigins)
+				: CorsUtils.normalizeConfiguredOriginsFromEntries(config.originEntries);
 
 		// This code runs as soon as Minecraft is in a mod-load-ready state.
 		// However, some things (like resources) may still be uninitialized.

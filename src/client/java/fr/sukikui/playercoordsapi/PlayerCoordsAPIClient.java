@@ -2,6 +2,8 @@ package fr.sukikui.playercoordsapi;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import fr.sukikui.playercoordsapi.config.CorsUtils;
+import fr.sukikui.playercoordsapi.config.ModConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -25,6 +27,13 @@ import java.util.concurrent.Executors;
 public class PlayerCoordsAPIClient implements ClientModInitializer {
     private static final int PORT = 25565;
     private static final long START_RETRY_DELAY_MS = 5_000L;
+    private static final String ALLOWED_METHODS = "GET, OPTIONS";
+    private static final String DEFAULT_ALLOWED_HEADERS = "Content-Type, Authorization";
+    private static final String ACCESS_DENIED_RESPONSE = "{\"error\": \"Access denied\"}";
+    private static final String ORIGIN_NOT_ALLOWED_RESPONSE = "{\"error\": \"Origin not allowed\"}";
+    private static final String NON_BROWSER_CLIENTS_NOT_ALLOWED_RESPONSE = "{\"error\": \"Non-browser local clients not allowed\"}";
+    private static final String METHOD_NOT_ALLOWED_RESPONSE = "{\"error\": \"Method not allowed\"}";
+    private static final String PLAYER_NOT_IN_WORLD_RESPONSE = "{\"error\": \"Player not in world\"}";
 
     private HttpServer server;
     private ExecutorService serverExecutor;
@@ -164,39 +173,82 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
     }
 
     private void handleCoordsRequest(HttpExchange exchange) throws IOException {
+        InetAddress remoteAddress = exchange.getRemoteAddress().getAddress();
+        if (remoteAddress == null || !remoteAddress.isLoopbackAddress()) {
+            sendResponse(exchange, 403, ACCESS_DENIED_RESPONSE, CorsDecision.noCors());
+            return;
+        }
+
+        CorsDecision corsDecision = evaluateCorsDecision(exchange);
+        if (!corsDecision.allowed()) {
+            sendResponse(exchange, 403, corsDecision.errorResponse(), CorsDecision.noCors());
+            return;
+        }
+
         String method = exchange.getRequestMethod();
 
         if (method.equalsIgnoreCase("OPTIONS")) {
-            sendResponse(exchange, 204, null);
+            sendResponse(exchange, 204, null, corsDecision);
             return;
         }
 
         if (!method.equalsIgnoreCase("GET")) {
-            exchange.getResponseHeaders().set("Allow", "GET, OPTIONS");
-            sendResponse(exchange, 405, "{\"error\": \"Method not allowed\"}");
-            return;
-        }
-
-        // Check if the client is allowed to access (only localhost)
-        InetAddress remoteAddress = exchange.getRemoteAddress().getAddress();
-        if (remoteAddress == null || !remoteAddress.isLoopbackAddress()) {
-            sendResponse(exchange, 403, "{\"error\": \"Access denied\"}");
+            exchange.getResponseHeaders().set("Allow", ALLOWED_METHODS);
+            sendResponse(exchange, 405, METHOD_NOT_ALLOWED_RESPONSE, corsDecision);
             return;
         }
 
         PlayerSnapshot snapshot = latestSnapshot;
         if (snapshot != null) {
-            sendResponse(exchange, 200, snapshot.toJson());
+            sendResponse(exchange, 200, snapshot.toJson(), corsDecision);
         } else {
-            sendResponse(exchange, 404, "{\"error\": \"Player not in world\"}");
+            sendResponse(exchange, 404, PLAYER_NOT_IN_WORLD_RESPONSE, corsDecision);
         }
     }
 
-    private void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
-        // Add CORS headers
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    private CorsDecision evaluateCorsDecision(HttpExchange exchange) {
+        ModConfig config = PlayerCoordsAPI.getConfig();
+        String requestOrigin = exchange.getRequestHeaders().getFirst("Origin");
+
+        if (requestOrigin == null || requestOrigin.isBlank()) {
+            return config.allowNonBrowserLocalClients
+                    ? CorsDecision.noCors()
+                    : CorsDecision.denied(NON_BROWSER_CLIENTS_NOT_ALLOWED_RESPONSE);
+        }
+
+        if (config.corsPolicy == ModConfig.CorsPolicy.ALLOW_ALL) {
+            return CorsDecision.allowed("*", resolveAllowedHeaders(exchange), false);
+        }
+
+        if (!CorsUtils.isOriginAllowed(config, requestOrigin)) {
+            return CorsDecision.denied(ORIGIN_NOT_ALLOWED_RESPONSE);
+        }
+
+        return CorsUtils.normalizeOrigin(requestOrigin)
+                .map(origin -> CorsDecision.allowed(origin, resolveAllowedHeaders(exchange), true))
+                .orElseGet(() -> CorsDecision.denied(ORIGIN_NOT_ALLOWED_RESPONSE));
+    }
+
+    private String resolveAllowedHeaders(HttpExchange exchange) {
+        String requestedHeaders = exchange.getRequestHeaders().getFirst("Access-Control-Request-Headers");
+
+        if (requestedHeaders == null || requestedHeaders.isBlank()) {
+            return DEFAULT_ALLOWED_HEADERS;
+        }
+
+        return requestedHeaders;
+    }
+
+    private void sendResponse(HttpExchange exchange, int statusCode, String response, CorsDecision corsDecision) throws IOException {
+        if (corsDecision.allowOrigin() != null) {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", corsDecision.allowOrigin());
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", ALLOWED_METHODS);
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", corsDecision.allowHeaders());
+
+            if (corsDecision.varyByOrigin()) {
+                exchange.getResponseHeaders().set("Vary", "Origin, Access-Control-Request-Headers");
+            }
+        }
 
         if (response != null) {
             byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
@@ -235,6 +287,20 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         }
 
         return escaped.toString();
+    }
+
+    private record CorsDecision(boolean allowed, String allowOrigin, String allowHeaders, boolean varyByOrigin, String errorResponse) {
+        private static CorsDecision allowed(String allowOrigin, String allowHeaders, boolean varyByOrigin) {
+            return new CorsDecision(true, allowOrigin, allowHeaders, varyByOrigin, null);
+        }
+
+        private static CorsDecision denied(String errorResponse) {
+            return new CorsDecision(false, null, null, false, errorResponse);
+        }
+
+        private static CorsDecision noCors() {
+            return new CorsDecision(true, null, null, false, null);
+        }
     }
 
     private record PlayerSnapshot(

@@ -18,7 +18,7 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 - Lightweight HTTP server running only on localhost providing your coordinates
 - Client-side only - no server-side components needed
 - Works in singleplayer and multiplayer
-- Mod menu integration allowing you to enable/disable the API
+- Mod menu integration allowing you to enable/disable the API and configure CORS
 
 ## 🚀 Installation
 
@@ -42,8 +42,8 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
   "z": -789.12,
   "yaw": 180.00,
   "pitch": 12.50,
-  "world": "overworld",
-  "biome": "plains",
+  "world": "minecraft:overworld",
+  "biome": "minecraft:plains",
   "uuid": "550e8400-e29b-41d4-a716-446655440000",
   "username": "PlayerName"
 }
@@ -58,8 +58,8 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 | `z`        | `number` | North-South       |
 | `yaw`      | `number` | Horizontal rotation (degrees) |
 | `pitch`    | `number` | Vertical rotation (degrees)   |
-| `world`    | `string` | Minecraft world   |
-| `biome`    | `string` | Minecraft biome   |
+| `world`    | `string` | Minecraft world registry ID   |
+| `biome`    | `string` | Minecraft biome registry ID   |
 | `uuid`     | `string` | Player UUID       |
 | `username` | `string` | Player username   |
 
@@ -67,16 +67,17 @@ PlayerCoordsAPI provides real-time access to your Minecraft player coordinates t
 
 | Status | Message             |
 |--------|---------------------|
-| `403`  | Access denied       |
+| `403`  | Access denied / Origin not allowed |
 | `404`  | Player not in world |
+| `405`  | Method not allowed  |
 
 ## 🔒 Security
 
 For security reasons, the API server:
-- Only accepts connections from localhost `127.0.0.1`
+- Only accepts connections from loopback addresses such as `127.0.0.1` and `::1`
 - Runs on port `25565` by default
 - Provides read-only access to player position data
-- Allows requests from any origin (CORS `Access-Control-Allow-Origin: *`) for easy integration with web applications
+- Uses a configurable CORS policy. By default it allows all origins for backward compatibility, but you can restrict it in the config screen
 
 ## 🛠️ Examples
 
