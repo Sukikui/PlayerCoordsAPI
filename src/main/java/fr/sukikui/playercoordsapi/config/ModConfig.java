@@ -31,6 +31,7 @@ public class ModConfig implements ConfigData {
 
     public boolean enabled = true;
     public CorsPolicy corsPolicy = CorsPolicy.ALLOW_ALL;
+    public boolean allowNonBrowserLocalClients = true;
     public List<String> allowedOrigins = new ArrayList<>(DEFAULT_ALLOWED_ORIGINS);
     public List<OriginEntry> originEntries = new ArrayList<>();
 }

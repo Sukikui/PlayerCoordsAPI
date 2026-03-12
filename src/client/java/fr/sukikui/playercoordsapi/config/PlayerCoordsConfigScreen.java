@@ -6,6 +6,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.tooltip.TooltipPositioner;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -16,6 +17,7 @@ import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
+import org.joml.Vector2i;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,11 @@ import java.util.Optional;
 
 @Environment(EnvType.CLIENT)
 final class PlayerCoordsConfigScreen extends Screen {
+    private static final TooltipPositioner TOP_TOOLTIP_POSITIONER = (screenWidth, screenHeight, x, y, width, height) ->
+            new Vector2i(
+                    MathHelper.clamp(x + 12, 6, Math.max(6, screenWidth - width - 6)),
+                    MathHelper.clamp(y - height - 12, 6, Math.max(6, screenHeight - height - 6))
+            );
     private static final int CONTENT_WIDTH = 340;
     private static final int ROW_HEIGHT = 20;
     private static final int ROW_SPACING = 28;
@@ -42,8 +49,10 @@ final class PlayerCoordsConfigScreen extends Screen {
 
     private TextWidget enabledLabel;
     private TextWidget corsPolicyLabel;
+    private TextWidget nonBrowserClientsLabel;
     private CyclingButtonWidget<Boolean> enabledButton;
     private CyclingButtonWidget<ModConfig.CorsPolicy> corsPolicyButton;
+    private CyclingButtonWidget<Boolean> nonBrowserClientsButton;
     private ButtonWidget addOriginButton;
     private ButtonWidget doneButton;
 
@@ -53,6 +62,8 @@ final class PlayerCoordsConfigScreen extends Screen {
     private int listBottom;
     private int listLeft;
     private int listWidth;
+    private int corsPolicyRowY;
+    private int nonBrowserClientsRowY;
 
     PlayerCoordsConfigScreen(Screen parent) {
         super(Text.translatable("text.autoconfig.playercoordsapi.title"));
@@ -61,14 +72,12 @@ final class PlayerCoordsConfigScreen extends Screen {
         ModConfig config = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
         workingConfig.enabled = config.enabled;
         workingConfig.corsPolicy = config.corsPolicy == null ? ModConfig.CorsPolicy.ALLOW_ALL : config.corsPolicy;
+        workingConfig.allowNonBrowserLocalClients = config.allowNonBrowserLocalClients;
         workingConfig.allowedOrigins = new ArrayList<>(config.allowedOrigins == null ? List.of() : config.allowedOrigins);
         workingConfig.originEntries = new ArrayList<>(config.originEntries == null ? List.of() : config.originEntries);
 
         this.originDrafts = createDrafts(workingConfig.originEntries, workingConfig.allowedOrigins);
-
-        if (workingConfig.corsPolicy == ModConfig.CorsPolicy.CUSTOM_WHITELIST && originDrafts.isEmpty()) {
-            originDrafts.add(new OriginDraft());
-        }
+        syncOriginDraftsWithCorsPolicy();
     }
 
     @Override
@@ -89,6 +98,7 @@ final class PlayerCoordsConfigScreen extends Screen {
 
         y += ROW_SPACING;
 
+        corsPolicyRowY = y;
         corsPolicyLabel = this.addDrawableChild(new TextWidget(left, y + 6, CONTROL_WIDTH - 12, ROW_HEIGHT, Text.translatable("config.playercoordsapi.option.cors_policy"), this.textRenderer));
         corsPolicyLabel.active = false;
         corsPolicyButton = this.addDrawableChild(CyclingButtonWidget.builder(PlayerCoordsConfigScreen::getCorsPolicyLabel, workingConfig.corsPolicy)
@@ -96,14 +106,39 @@ final class PlayerCoordsConfigScreen extends Screen {
                 .omitKeyText()
                 .build(controlX, y, CONTROL_WIDTH, ROW_HEIGHT, Text.translatable("config.playercoordsapi.option.cors_policy"), (button, value) -> {
                     workingConfig.corsPolicy = value;
-
-                    if (value == ModConfig.CorsPolicy.CUSTOM_WHITELIST && originDrafts.isEmpty()) {
-                        originDrafts.add(new OriginDraft());
-                    }
-
+                    syncOriginDraftsWithCorsPolicy();
                     scrollOffset = 0;
                     clearAndInit();
                 }));
+
+        y += ROW_SPACING;
+        nonBrowserClientsRowY = y;
+
+        nonBrowserClientsLabel = this.addDrawableChild(new TextWidget(
+                left,
+                y + 6,
+                CONTROL_WIDTH - 12,
+                ROW_HEIGHT,
+                Text.translatable("config.playercoordsapi.option.allow_non_browser_local_clients"),
+                this.textRenderer
+        ));
+        nonBrowserClientsLabel.active = false;
+        nonBrowserClientsButton = this.addDrawableChild(CyclingButtonWidget.onOffBuilder(
+                        ScreenTexts.ON.copy().formatted(Formatting.GREEN),
+                        ScreenTexts.OFF.copy().formatted(Formatting.RED),
+                        workingConfig.allowNonBrowserLocalClients
+                )
+                .omitKeyText()
+                .build(
+                        controlX,
+                        y,
+                        CONTROL_WIDTH,
+                        ROW_HEIGHT,
+                        Text.translatable("config.playercoordsapi.option.allow_non_browser_local_clients"),
+                        (button, value) -> workingConfig.allowNonBrowserLocalClients = value
+                ));
+
+        y += ROW_SPACING;
 
         int bottomButtonsY = this.height - 28;
         int addButtonY = bottomButtonsY - BUTTON_HEIGHT - 8;
@@ -243,6 +278,7 @@ final class PlayerCoordsConfigScreen extends Screen {
         ModConfig config = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
         config.enabled = workingConfig.enabled;
         config.corsPolicy = workingConfig.corsPolicy;
+        config.allowNonBrowserLocalClients = workingConfig.allowNonBrowserLocalClients;
         config.originEntries = new ArrayList<>(workingConfig.originEntries);
         config.allowedOrigins = new ArrayList<>(workingConfig.allowedOrigins);
         AutoConfig.getConfigHolder(ModConfig.class).save();
@@ -365,6 +401,10 @@ final class PlayerCoordsConfigScreen extends Screen {
         List<ModConfig.OriginEntry> originEntries = new ArrayList<>();
 
         for (OriginDraft draft : originDrafts) {
+            if (draft.isEmpty()) {
+                continue;
+            }
+
             originEntries.add(draft.toConfigEntry());
         }
 
@@ -386,6 +426,18 @@ final class PlayerCoordsConfigScreen extends Screen {
         clearAndInit();
     }
 
+    private void syncOriginDraftsWithCorsPolicy() {
+        if (workingConfig.corsPolicy == ModConfig.CorsPolicy.CUSTOM_WHITELIST) {
+            if (originDrafts.isEmpty()) {
+                originDrafts.add(new OriginDraft());
+            }
+
+            return;
+        }
+
+        originDrafts.removeIf(OriginDraft::isEmpty);
+    }
+
     private boolean hasEmptyOriginDraft() {
         for (OriginDraft draft : originDrafts) {
             if (draft.host == null || draft.host.trim().isEmpty()) {
@@ -400,7 +452,11 @@ final class PlayerCoordsConfigScreen extends Screen {
         List<Text> tooltip = getHoveredTooltip(mouseX, mouseY);
 
         if (!tooltip.isEmpty()) {
-            context.drawTooltip(this.textRenderer, tooltip, mouseX, mouseY);
+            List<net.minecraft.text.OrderedText> orderedTooltip = new ArrayList<>(tooltip.size());
+            for (Text line : tooltip) {
+                orderedTooltip.add(line.asOrderedText());
+            }
+            context.drawTooltip(this.textRenderer, orderedTooltip, TOP_TOOLTIP_POSITIONER, mouseX, mouseY, false);
         }
     }
 
@@ -410,21 +466,29 @@ final class PlayerCoordsConfigScreen extends Screen {
         int hostWidth = CONTENT_WIDTH - ORIGIN_SCHEME_WIDTH - ORIGIN_PORT_WIDTH - ORIGIN_REMOVE_WIDTH - 24;
         int portX = listLeft + CONTENT_WIDTH - ORIGIN_REMOVE_WIDTH - 8 - ORIGIN_PORT_WIDTH;
 
+        if (isHoveringLabel(corsPolicyLabel, mouseX, mouseY)) {
+            return buildTooltipLines("config.playercoordsapi.option.cors_policy.tooltip", 6, false);
+        }
+
+        if (isHoveringLabel(nonBrowserClientsLabel, mouseX, mouseY)) {
+            return buildTooltipLines("config.playercoordsapi.option.allow_non_browser_local_clients.tooltip", 4, false);
+        }
+
         if (isWithin(mouseX, mouseY, hostX, headerY, hostWidth, ROW_HEIGHT)) {
-            return buildTooltip("config.playercoordsapi.option.origin_host.tooltip");
+            return buildHostTooltip();
         }
 
         if (isWithin(mouseX, mouseY, portX, headerY, ORIGIN_PORT_WIDTH, ROW_HEIGHT)) {
-            return buildTooltip("config.playercoordsapi.option.origin_port.tooltip");
+            return buildTooltip("config.playercoordsapi.option.origin_port.tooltip", true);
         }
 
         for (OriginRow row : originRows) {
             if (row.hostField.visible && row.hostField.isMouseOver(mouseX, mouseY)) {
-                return buildTooltip("config.playercoordsapi.option.origin_host.tooltip");
+                return buildHostTooltip();
             }
 
             if (row.portField.visible && row.portField.isMouseOver(mouseX, mouseY)) {
-                return buildTooltip("config.playercoordsapi.option.origin_port.tooltip");
+                return buildTooltip("config.playercoordsapi.option.origin_port.tooltip", true);
             }
         }
 
@@ -445,9 +509,17 @@ final class PlayerCoordsConfigScreen extends Screen {
         return null;
     }
 
-    private List<Text> buildTooltip(String key) {
+    private List<Text> buildHostTooltip() {
         List<Text> tooltip = new ArrayList<>();
-        tooltip.add(Text.translatable(key));
+        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_host.tooltip"));
+        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_host.tooltip.localhost")
+                .append(Text.literal(" localhost").formatted(Formatting.GREEN)));
+        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_host.tooltip.domain")
+                .append(Text.literal(" example.com").formatted(Formatting.GREEN)));
+        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_host.tooltip.ipv4")
+                .append(Text.literal(" 127.0.0.1").formatted(Formatting.GREEN)));
+        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_host.tooltip.ipv6")
+                .append(Text.literal(" 2001:db8::1").formatted(Formatting.GREEN)));
 
         if (!isWhitelistEditable()) {
             tooltip.add(Text.translatable("config.playercoordsapi.option.allowed_origins.disabled").formatted(Formatting.GRAY));
@@ -456,8 +528,37 @@ final class PlayerCoordsConfigScreen extends Screen {
         return tooltip;
     }
 
+    private List<Text> buildTooltip(String key, boolean includeWhitelistDisabledHint) {
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.translatable(key));
+
+        if (includeWhitelistDisabledHint && !isWhitelistEditable()) {
+            tooltip.add(Text.translatable("config.playercoordsapi.option.allowed_origins.disabled").formatted(Formatting.GRAY));
+        }
+
+        return tooltip;
+    }
+
+    private List<Text> buildTooltipLines(String keyPrefix, int lineCount, boolean includeWhitelistDisabledHint) {
+        List<Text> tooltip = new ArrayList<>(lineCount + 1);
+
+        for (int i = 1; i <= lineCount; i++) {
+            tooltip.add(Text.translatable(keyPrefix + "." + i));
+        }
+
+        if (includeWhitelistDisabledHint && !isWhitelistEditable()) {
+            tooltip.add(Text.translatable("config.playercoordsapi.option.allowed_origins.disabled").formatted(Formatting.GRAY));
+        }
+
+        return tooltip;
+    }
+
     private static boolean isWithin(double mouseX, double mouseY, int x, int y, int width, int height) {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+    }
+
+    private static boolean isHoveringLabel(TextWidget label, int mouseX, int mouseY) {
+        return isWithin(mouseX, mouseY, label.getX(), label.getY(), label.getWidth(), ROW_HEIGHT);
     }
 
     private boolean isWhitelistEditable() {
@@ -614,6 +715,10 @@ final class PlayerCoordsConfigScreen extends Screen {
 
         private Optional<String> toNormalizedOrigin() {
             return CorsUtils.normalizeConfiguredOrigin(host, port, mode);
+        }
+
+        private boolean isEmpty() {
+            return host == null || host.trim().isEmpty();
         }
     }
 }

@@ -29,6 +29,11 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
     private static final long START_RETRY_DELAY_MS = 5_000L;
     private static final String ALLOWED_METHODS = "GET, OPTIONS";
     private static final String DEFAULT_ALLOWED_HEADERS = "Content-Type, Authorization";
+    private static final String ACCESS_DENIED_RESPONSE = "{\"error\": \"Access denied\"}";
+    private static final String ORIGIN_NOT_ALLOWED_RESPONSE = "{\"error\": \"Origin not allowed\"}";
+    private static final String NON_BROWSER_CLIENTS_NOT_ALLOWED_RESPONSE = "{\"error\": \"Non-browser local clients not allowed\"}";
+    private static final String METHOD_NOT_ALLOWED_RESPONSE = "{\"error\": \"Method not allowed\"}";
+    private static final String PLAYER_NOT_IN_WORLD_RESPONSE = "{\"error\": \"Player not in world\"}";
 
     private HttpServer server;
     private ExecutorService serverExecutor;
@@ -170,13 +175,13 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
     private void handleCoordsRequest(HttpExchange exchange) throws IOException {
         InetAddress remoteAddress = exchange.getRemoteAddress().getAddress();
         if (remoteAddress == null || !remoteAddress.isLoopbackAddress()) {
-            sendResponse(exchange, 403, "{\"error\": \"Access denied\"}", CorsDecision.noCors());
+            sendResponse(exchange, 403, ACCESS_DENIED_RESPONSE, CorsDecision.noCors());
             return;
         }
 
         CorsDecision corsDecision = evaluateCorsDecision(exchange);
         if (!corsDecision.allowed()) {
-            sendResponse(exchange, 403, "{\"error\": \"Origin not allowed\"}", CorsDecision.noCors());
+            sendResponse(exchange, 403, corsDecision.errorResponse(), CorsDecision.noCors());
             return;
         }
 
@@ -189,7 +194,7 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
 
         if (!method.equalsIgnoreCase("GET")) {
             exchange.getResponseHeaders().set("Allow", ALLOWED_METHODS);
-            sendResponse(exchange, 405, "{\"error\": \"Method not allowed\"}", corsDecision);
+            sendResponse(exchange, 405, METHOD_NOT_ALLOWED_RESPONSE, corsDecision);
             return;
         }
 
@@ -197,30 +202,31 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         if (snapshot != null) {
             sendResponse(exchange, 200, snapshot.toJson(), corsDecision);
         } else {
-            sendResponse(exchange, 404, "{\"error\": \"Player not in world\"}", corsDecision);
+            sendResponse(exchange, 404, PLAYER_NOT_IN_WORLD_RESPONSE, corsDecision);
         }
     }
 
     private CorsDecision evaluateCorsDecision(HttpExchange exchange) {
         ModConfig config = PlayerCoordsAPI.getConfig();
+        String requestOrigin = exchange.getRequestHeaders().getFirst("Origin");
+
+        if (requestOrigin == null || requestOrigin.isBlank()) {
+            return config.allowNonBrowserLocalClients
+                    ? CorsDecision.noCors()
+                    : CorsDecision.denied(NON_BROWSER_CLIENTS_NOT_ALLOWED_RESPONSE);
+        }
 
         if (config.corsPolicy == ModConfig.CorsPolicy.ALLOW_ALL) {
             return CorsDecision.allowed("*", resolveAllowedHeaders(exchange), false);
         }
 
-        String requestOrigin = exchange.getRequestHeaders().getFirst("Origin");
-
-        if (requestOrigin == null || requestOrigin.isBlank()) {
-            return CorsDecision.noCors();
-        }
-
         if (!CorsUtils.isOriginAllowed(config, requestOrigin)) {
-            return CorsDecision.denied();
+            return CorsDecision.denied(ORIGIN_NOT_ALLOWED_RESPONSE);
         }
 
         return CorsUtils.normalizeOrigin(requestOrigin)
                 .map(origin -> CorsDecision.allowed(origin, resolveAllowedHeaders(exchange), true))
-                .orElseGet(CorsDecision::denied);
+                .orElseGet(() -> CorsDecision.denied(ORIGIN_NOT_ALLOWED_RESPONSE));
     }
 
     private String resolveAllowedHeaders(HttpExchange exchange) {
@@ -283,17 +289,17 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
         return escaped.toString();
     }
 
-    private record CorsDecision(boolean allowed, String allowOrigin, String allowHeaders, boolean varyByOrigin) {
+    private record CorsDecision(boolean allowed, String allowOrigin, String allowHeaders, boolean varyByOrigin, String errorResponse) {
         private static CorsDecision allowed(String allowOrigin, String allowHeaders, boolean varyByOrigin) {
-            return new CorsDecision(true, allowOrigin, allowHeaders, varyByOrigin);
+            return new CorsDecision(true, allowOrigin, allowHeaders, varyByOrigin, null);
         }
 
-        private static CorsDecision denied() {
-            return new CorsDecision(false, null, null, false);
+        private static CorsDecision denied(String errorResponse) {
+            return new CorsDecision(false, null, null, false, errorResponse);
         }
 
         private static CorsDecision noCors() {
-            return new CorsDecision(true, null, null, false);
+            return new CorsDecision(true, null, null, false, null);
         }
     }
 
