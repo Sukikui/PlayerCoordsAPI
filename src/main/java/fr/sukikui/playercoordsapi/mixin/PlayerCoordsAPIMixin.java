@@ -6,11 +6,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Empty template mixin kept as a starting point for future common-side injections.
+ */
 @Mixin(MinecraftServer.class)
 public class PlayerCoordsAPIMixin {
 
+	/**
+	 * No-op hook placeholder.
+	 */
 	@Inject(at = @At("HEAD"), method = "loadWorld")
 	private void init(CallbackInfo info) {
-		// This code is injected into the start of MinecraftServer.loadWorld()
 	}
 }
