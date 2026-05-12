@@ -7,14 +7,13 @@ import fr.sukikui.playercoordsapi.config.ModConfig;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.world.biome.Biome;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.Holder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.biome.Biome;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.BindException;
@@ -86,7 +85,7 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
             handleConfigState(PlayerCoordsAPI.getConfig());
         });
 
-        ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((client, world) -> updateSnapshot(client));
+        ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, world) -> updateSnapshot(client));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> clearSnapshot());
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             clearSnapshot();
@@ -152,29 +151,29 @@ public class PlayerCoordsAPIClient implements ClientModInitializer {
     /**
      * Refreshes the cached player snapshot from the client thread.
      */
-    private void updateSnapshot(MinecraftClient client) {
-        PlayerEntity player = client.player;
-        ClientWorld worldObj = client.world;
+    private void updateSnapshot(Minecraft client) {
+        Player player = client.player;
+        ClientLevel worldObj = client.level;
 
         if (player == null || worldObj == null) {
             latestSnapshot = null;
             return;
         }
 
-        RegistryEntry<Biome> biomeEntry = worldObj.getBiome(player.getBlockPos());
-        String biome = biomeEntry.getKey()
-                .map(key -> key.getValue().toString())
+        Holder<Biome> biomeEntry = worldObj.getBiome(player.blockPosition());
+        String biome = biomeEntry.unwrapKey()
+                .map(key -> key.identifier().toString())
                 .orElse("unknown");
 
         latestSnapshot = new PlayerSnapshot(
                 player.getX(),
                 player.getY(),
                 player.getZ(),
-                player.getYaw(),
-                player.getPitch(),
-                worldObj.getRegistryKey().getValue().toString(),
+                player.getYRot(),
+                player.getXRot(),
+                worldObj.dimension().identifier().toString(),
                 biome,
-                player.getUuidAsString(),
+                player.getStringUUID(),
                 player.getName().getString()
         );
     }

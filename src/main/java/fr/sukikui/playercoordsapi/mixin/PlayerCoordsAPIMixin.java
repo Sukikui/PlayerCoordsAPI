@@ -15,7 +15,7 @@ public class PlayerCoordsAPIMixin {
 	/**
 	 * No-op hook placeholder.
 	 */
-	@Inject(at = @At("HEAD"), method = "loadWorld")
+	@Inject(at = @At("HEAD"), method = "loadLevel")
 	private void init(CallbackInfo info) {
 	}
 }
