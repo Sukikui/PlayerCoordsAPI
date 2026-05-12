@@ -4,20 +4,20 @@ import fr.sukikui.playercoordsapi.PlayerCoordsAPIClient;
 import me.shedaniel.autoconfig.AutoConfig;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.TooltipPositioner;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.CyclingButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.TextWidget;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import org.joml.Vector2i;
 
 import java.util.ArrayList;
@@ -32,10 +32,10 @@ import java.util.Set;
  */
 @Environment(EnvType.CLIENT)
 final class PlayerCoordsConfigScreen extends Screen {
-    private static final TooltipPositioner TOP_TOOLTIP_POSITIONER = (screenWidth, screenHeight, x, y, width, height) ->
+    private static final ClientTooltipPositioner TOP_TOOLTIP_POSITIONER = (screenWidth, screenHeight, x, y, width, height) ->
             new Vector2i(
-                    MathHelper.clamp(x + 12, 6, Math.max(6, screenWidth - width - 6)),
-                    MathHelper.clamp(y - height - 12, 6, Math.max(6, screenHeight - height - 6))
+                    Mth.clamp(x + 12, 6, Math.max(6, screenWidth - width - 6)),
+                    Mth.clamp(y - height - 12, 6, Math.max(6, screenHeight - height - 6))
             );
     private static final int CONTENT_WIDTH = 340;
     private static final int ROW_HEIGHT = 20;
@@ -58,20 +58,20 @@ final class PlayerCoordsConfigScreen extends Screen {
     private final List<OriginDraft> originDrafts;
     private final List<OriginRow> originRows = new ArrayList<>();
 
-    private TextWidget enabledLabel;
-    private TextWidget apiPortLabel;
-    private TextWidget corsPolicyLabel;
-    private TextWidget nonBrowserClientsLabel;
-    private CyclingButtonWidget<Boolean> enabledButton;
-    private TextFieldWidget apiPortField;
-    private CyclingButtonWidget<ModConfig.CorsPolicy> corsPolicyButton;
-    private CyclingButtonWidget<Boolean> nonBrowserClientsButton;
-    private ButtonWidget apiPortResetButton;
-    private ButtonWidget corsPolicyResetButton;
-    private ButtonWidget nonBrowserClientsResetButton;
-    private ButtonWidget addOriginButton;
-    private ButtonWidget applyButton;
-    private ButtonWidget doneButton;
+    private StringWidget enabledLabel;
+    private StringWidget apiPortLabel;
+    private StringWidget corsPolicyLabel;
+    private StringWidget nonBrowserClientsLabel;
+    private CycleButton<Boolean> enabledButton;
+    private EditBox apiPortField;
+    private CycleButton<ModConfig.CorsPolicy> corsPolicyButton;
+    private CycleButton<Boolean> nonBrowserClientsButton;
+    private Button apiPortResetButton;
+    private Button corsPolicyResetButton;
+    private Button nonBrowserClientsResetButton;
+    private Button addOriginButton;
+    private Button applyButton;
+    private Button doneButton;
 
     private boolean hasValidationError;
     private String apiPortValue;
@@ -85,7 +85,7 @@ final class PlayerCoordsConfigScreen extends Screen {
      * Creates the screen and copies the persisted config into a mutable working draft.
      */
     PlayerCoordsConfigScreen(Screen parent) {
-        super(Text.translatable("text.autoconfig.playercoordsapi.title"));
+        super(Component.translatable("text.autoconfig.playercoordsapi.title"));
         this.parent = parent;
 
         ModConfig config = AutoConfig.getConfigHolder(ModConfig.class).getConfig();
@@ -112,61 +112,61 @@ final class PlayerCoordsConfigScreen extends Screen {
         int labelWidth = resetX - ROW_GAP - left;
         int y = 52;
 
-        enabledLabel = this.addDrawableChild(new TextWidget(left, y + 6, labelWidth, ROW_HEIGHT, Text.translatable("config.playercoordsapi.option.enabled"), this.textRenderer));
+        enabledLabel = this.addRenderableWidget(new StringWidget(left, y + 6, labelWidth, ROW_HEIGHT, Component.translatable("config.playercoordsapi.option.enabled"), this.font));
         enabledLabel.active = false;
-        enabledButton = this.addDrawableChild(CyclingButtonWidget.onOffBuilder(
-                        ScreenTexts.ON.copy().formatted(Formatting.GREEN),
-                        ScreenTexts.OFF.copy().formatted(Formatting.RED),
+        enabledButton = this.addRenderableWidget(CycleButton.booleanBuilder(
+                        CommonComponents.OPTION_ON.copy().withStyle(ChatFormatting.GREEN),
+                        CommonComponents.OPTION_OFF.copy().withStyle(ChatFormatting.RED),
                         workingConfig.enabled
                 )
-                .omitKeyText()
-                .build(controlX, y, CONTROL_WIDTH, ROW_HEIGHT, Text.translatable("config.playercoordsapi.option.enabled"), (button, value) -> workingConfig.enabled = value));
+                .displayOnlyValue()
+                .create(controlX, y, CONTROL_WIDTH, ROW_HEIGHT, Component.translatable("config.playercoordsapi.option.enabled"), (button, value) -> workingConfig.enabled = value));
 
         y += ROW_SPACING;
-        apiPortLabel = this.addDrawableChild(new TextWidget(left, y + 6, labelWidth, ROW_HEIGHT, Text.translatable("config.playercoordsapi.option.api_port"), this.textRenderer));
+        apiPortLabel = this.addRenderableWidget(new StringWidget(left, y + 6, labelWidth, ROW_HEIGHT, Component.translatable("config.playercoordsapi.option.api_port"), this.font));
         apiPortLabel.active = false;
-        apiPortResetButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("config.playercoordsapi.button.reset"), button -> resetApiPort())
-                .dimensions(resetX, y, RESET_BUTTON_WIDTH, ROW_HEIGHT)
+        apiPortResetButton = this.addRenderableWidget(Button.builder(Component.translatable("config.playercoordsapi.button.reset"), button -> resetApiPort())
+                .bounds(resetX, y, RESET_BUTTON_WIDTH, ROW_HEIGHT)
                 .build());
-        apiPortField = this.addDrawableChild(new TextFieldWidget(this.textRenderer, controlX, y, CONTROL_WIDTH, ROW_HEIGHT, ScreenTexts.EMPTY));
+        apiPortField = this.addRenderableWidget(new EditBox(this.font, controlX, y, CONTROL_WIDTH, ROW_HEIGHT, CommonComponents.EMPTY));
         apiPortField.setMaxLength(5);
-        apiPortField.setTextPredicate(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
-        apiPortField.setPlaceholder(Text.literal(Integer.toString(ModConfig.DEFAULT_API_PORT)));
-        apiPortField.setText(apiPortValue);
-        apiPortField.setEditableColor(0xFFE0E0E0);
-        apiPortField.setUneditableColor(0xFF808080);
-        apiPortField.setChangedListener(value -> {
-            apiPortValue = value;
-            ModConfig.parseApiPort(value).ifPresent(port -> workingConfig.apiPort = port);
+        apiPortField.setHint(Component.literal(Integer.toString(ModConfig.DEFAULT_API_PORT)));
+        apiPortField.setValue(apiPortValue);
+        apiPortField.setTextColor(0xFFE0E0E0);
+        apiPortField.setTextColorUneditable(0xFF808080);
+        apiPortField.setResponder(value -> {
+            String digitsOnly = keepDigitsOnly(apiPortField, value);
+            apiPortValue = digitsOnly;
+            ModConfig.parseApiPort(digitsOnly).ifPresent(port -> workingConfig.apiPort = port);
             updateValidation();
         });
 
         y += ROW_SPACING;
 
-        nonBrowserClientsLabel = this.addDrawableChild(new TextWidget(
+        nonBrowserClientsLabel = this.addRenderableWidget(new StringWidget(
                 left,
                 y + 6,
                 labelWidth,
                 ROW_HEIGHT,
-                Text.translatable("config.playercoordsapi.option.allow_non_browser_local_clients"),
-                this.textRenderer
+                Component.translatable("config.playercoordsapi.option.allow_non_browser_local_clients"),
+                this.font
         ));
         nonBrowserClientsLabel.active = false;
-        nonBrowserClientsResetButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("config.playercoordsapi.button.reset"), button -> resetNonBrowserClients())
-                .dimensions(resetX, y, RESET_BUTTON_WIDTH, ROW_HEIGHT)
+        nonBrowserClientsResetButton = this.addRenderableWidget(Button.builder(Component.translatable("config.playercoordsapi.button.reset"), button -> resetNonBrowserClients())
+                .bounds(resetX, y, RESET_BUTTON_WIDTH, ROW_HEIGHT)
                 .build());
-        nonBrowserClientsButton = this.addDrawableChild(CyclingButtonWidget.onOffBuilder(
-                        ScreenTexts.ON.copy().formatted(Formatting.GREEN),
-                        ScreenTexts.OFF.copy().formatted(Formatting.RED),
+        nonBrowserClientsButton = this.addRenderableWidget(CycleButton.booleanBuilder(
+                        CommonComponents.OPTION_ON.copy().withStyle(ChatFormatting.GREEN),
+                        CommonComponents.OPTION_OFF.copy().withStyle(ChatFormatting.RED),
                         workingConfig.allowNonBrowserLocalClients
                 )
-                .omitKeyText()
-                .build(
+                .displayOnlyValue()
+                .create(
                         controlX,
                         y,
                         CONTROL_WIDTH,
                         ROW_HEIGHT,
-                        Text.translatable("config.playercoordsapi.option.allow_non_browser_local_clients"),
+                        Component.translatable("config.playercoordsapi.option.allow_non_browser_local_clients"),
                         (button, value) -> {
                             workingConfig.allowNonBrowserLocalClients = value;
                             updateValidation();
@@ -174,19 +174,19 @@ final class PlayerCoordsConfigScreen extends Screen {
                 ));
 
         y += ROW_SPACING;
-        corsPolicyLabel = this.addDrawableChild(new TextWidget(left, y + 6, labelWidth, ROW_HEIGHT, Text.translatable("config.playercoordsapi.option.cors_policy"), this.textRenderer));
+        corsPolicyLabel = this.addRenderableWidget(new StringWidget(left, y + 6, labelWidth, ROW_HEIGHT, Component.translatable("config.playercoordsapi.option.cors_policy"), this.font));
         corsPolicyLabel.active = false;
-        corsPolicyResetButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("config.playercoordsapi.button.reset"), button -> resetCorsPolicy())
-                .dimensions(resetX, y, RESET_BUTTON_WIDTH, ROW_HEIGHT)
+        corsPolicyResetButton = this.addRenderableWidget(Button.builder(Component.translatable("config.playercoordsapi.button.reset"), button -> resetCorsPolicy())
+                .bounds(resetX, y, RESET_BUTTON_WIDTH, ROW_HEIGHT)
                 .build());
-        corsPolicyButton = this.addDrawableChild(CyclingButtonWidget.builder(PlayerCoordsConfigScreen::getCorsPolicyLabel, workingConfig.corsPolicy)
-                .values(ModConfig.CorsPolicy.values())
-                .omitKeyText()
-                .build(controlX, y, CONTROL_WIDTH, ROW_HEIGHT, Text.translatable("config.playercoordsapi.option.cors_policy"), (button, value) -> {
+        corsPolicyButton = this.addRenderableWidget(CycleButton.builder(PlayerCoordsConfigScreen::getCorsPolicyLabel, workingConfig.corsPolicy)
+                .withValues(ModConfig.CorsPolicy.values())
+                .displayOnlyValue()
+                .create(controlX, y, CONTROL_WIDTH, ROW_HEIGHT, Component.translatable("config.playercoordsapi.option.cors_policy"), (button, value) -> {
                     workingConfig.corsPolicy = value;
                     syncOriginDraftsWithCorsPolicy();
                     scrollOffset = 0;
-                    clearAndInit();
+                    rebuildWidgets();
                 }));
 
         y += ROW_SPACING;
@@ -200,8 +200,8 @@ final class PlayerCoordsConfigScreen extends Screen {
 
         buildOriginRows();
 
-        addOriginButton = this.addDrawableChild(ButtonWidget.builder(
-                        Text.translatable("config.playercoordsapi.option.add_origin"),
+        addOriginButton = this.addRenderableWidget(Button.builder(
+                        Component.translatable("config.playercoordsapi.option.add_origin"),
                         button -> {
                             if (hasEmptyOriginDraft()) {
                                 return;
@@ -209,26 +209,26 @@ final class PlayerCoordsConfigScreen extends Screen {
 
                             originDrafts.add(new OriginDraft());
                             scrollOffset = Integer.MAX_VALUE;
-                            clearAndInit();
+                            rebuildWidgets();
                         })
-                .dimensions(left, addButtonY, CONTENT_WIDTH, BUTTON_HEIGHT)
+                .bounds(left, addButtonY, CONTENT_WIDTH, BUTTON_HEIGHT)
                 .build());
 
         int bottomButtonWidth = (CONTENT_WIDTH - ROW_GAP * 2) / 3;
-        this.addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, button -> close())
-                .dimensions(left, bottomButtonsY, bottomButtonWidth, BUTTON_HEIGHT)
+        this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> onClose())
+                .bounds(left, bottomButtonsY, bottomButtonWidth, BUTTON_HEIGHT)
                 .build());
 
-        applyButton = this.addDrawableChild(ButtonWidget.builder(Text.translatable("config.playercoordsapi.button.apply"), button -> {
+        applyButton = this.addRenderableWidget(Button.builder(Component.translatable("config.playercoordsapi.button.apply"), button -> {
                     if (applyChanges()) {
-                        clearAndInit();
+                        rebuildWidgets();
                     }
                 })
-                .dimensions(left + bottomButtonWidth + ROW_GAP, bottomButtonsY, bottomButtonWidth, BUTTON_HEIGHT)
+                .bounds(left + bottomButtonWidth + ROW_GAP, bottomButtonsY, bottomButtonWidth, BUTTON_HEIGHT)
                 .build());
 
-        doneButton = this.addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> saveAndClose())
-                .dimensions(left + (bottomButtonWidth + ROW_GAP) * 2, bottomButtonsY, bottomButtonWidth, BUTTON_HEIGHT)
+        doneButton = this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> saveAndClose())
+                .bounds(left + (bottomButtonWidth + ROW_GAP) * 2, bottomButtonsY, bottomButtonWidth, BUTTON_HEIGHT)
                 .build());
 
         updateValidation();
@@ -239,9 +239,9 @@ final class PlayerCoordsConfigScreen extends Screen {
      * Returns to the parent screen without applying pending changes.
      */
     @Override
-    public void close() {
-        if (this.client != null) {
-            this.client.setScreen(parent);
+    public void onClose() {
+        if (this.minecraft != null) {
+            this.minecraft.setScreen(parent);
         }
     }
 
@@ -255,7 +255,7 @@ final class PlayerCoordsConfigScreen extends Screen {
                 && mouseY >= listTop
                 && mouseY <= listBottom
                 && getMaxScroll() > 0) {
-            scrollOffset = MathHelper.clamp(scrollOffset - (int) (verticalAmount * 18.0), 0, getMaxScroll());
+            scrollOffset = Mth.clamp(scrollOffset - (int) (verticalAmount * 18.0), 0, getMaxScroll());
             layoutOriginRows();
             return true;
         }
@@ -267,7 +267,7 @@ final class PlayerCoordsConfigScreen extends Screen {
      * Routes clicks to focused text fields before falling back to default widget handling.
      */
     @Override
-    public boolean mouseClicked(Click click, boolean doubleClick) {
+    public boolean mouseClicked(MouseButtonEvent click, boolean doubleClick) {
         if (apiPortField.isMouseOver(click.x(), click.y()) && apiPortField.mouseClicked(click, doubleClick)) {
             apiPortField.setFocused(true);
             clearOriginFieldFocus();
@@ -290,8 +290,8 @@ final class PlayerCoordsConfigScreen extends Screen {
      * Forwards key presses to the currently focused text field when applicable.
      */
     @Override
-    public boolean keyPressed(KeyInput keyInput) {
-        TextFieldWidget focusedTextField = getFocusedTextField();
+    public boolean keyPressed(KeyEvent keyInput) {
+        EditBox focusedTextField = getFocusedTextField();
 
         if (focusedTextField != null && focusedTextField.keyPressed(keyInput)) {
             return true;
@@ -304,8 +304,8 @@ final class PlayerCoordsConfigScreen extends Screen {
      * Forwards typed characters to the currently focused text field when applicable.
      */
     @Override
-    public boolean charTyped(CharInput charInput) {
-        TextFieldWidget focusedTextField = getFocusedTextField();
+    public boolean charTyped(CharacterEvent charInput) {
+        EditBox focusedTextField = getFocusedTextField();
 
         if (focusedTextField != null && focusedTextField.charTyped(charInput)) {
             return true;
@@ -318,20 +318,20 @@ final class PlayerCoordsConfigScreen extends Screen {
      * Renders the custom whitelist panel, standard widgets, and active tooltips.
      */
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         layoutOriginRows();
         renderOriginBlocks(context);
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         int left = this.width / 2 - CONTENT_WIDTH / 2;
         int controlX = left + CONTENT_WIDTH - CONTROL_WIDTH;
 
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 12, 0xFFFFFFFF);
+        context.centeredText(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
         renderServerStatus(context, left);
         if (getMaxScroll() > 0) {
             int indicatorX = controlX + CONTROL_WIDTH - 8;
-            context.drawTextWithShadow(this.textRenderer, Text.literal(scrollOffset > 0 ? "^" : ""), indicatorX, listTop - 12, 0xFF808080);
-            context.drawTextWithShadow(this.textRenderer, Text.literal(scrollOffset < getMaxScroll() ? "v" : ""), indicatorX, listBottom - 8, 0xFF808080);
+            context.text(this.font, Component.literal(scrollOffset > 0 ? "^" : ""), indicatorX, listTop - 12, 0xFF808080);
+            context.text(this.font, Component.literal(scrollOffset < getMaxScroll() ? "v" : ""), indicatorX, listBottom - 8, 0xFF808080);
         }
 
         renderHoveredTooltip(context, mouseX, mouseY);
@@ -342,7 +342,7 @@ final class PlayerCoordsConfigScreen extends Screen {
      */
     private void saveAndClose() {
         if (applyChanges()) {
-            close();
+            onClose();
         }
     }
 
@@ -376,7 +376,7 @@ final class PlayerCoordsConfigScreen extends Screen {
     private void resetApiPort() {
         workingConfig.apiPort = ModConfig.DEFAULT_API_PORT;
         apiPortValue = Integer.toString(ModConfig.DEFAULT_API_PORT);
-        clearAndInit();
+        rebuildWidgets();
     }
 
     /**
@@ -386,7 +386,7 @@ final class PlayerCoordsConfigScreen extends Screen {
         workingConfig.corsPolicy = ModConfig.CorsPolicy.ALLOW_ALL;
         syncOriginDraftsWithCorsPolicy();
         scrollOffset = 0;
-        clearAndInit();
+        rebuildWidgets();
     }
 
     /**
@@ -394,7 +394,7 @@ final class PlayerCoordsConfigScreen extends Screen {
      */
     private void resetNonBrowserClients() {
         workingConfig.allowNonBrowserLocalClients = true;
-        clearAndInit();
+        rebuildWidgets();
     }
 
     /**
@@ -480,10 +480,10 @@ final class PlayerCoordsConfigScreen extends Screen {
         for (OriginDraft draft : originDrafts) {
             OriginRow row = new OriginRow(draft);
             originRows.add(row);
-            this.addDrawableChild(row.schemeButton);
-            this.addDrawableChild(row.hostField);
-            this.addDrawableChild(row.portField);
-            this.addDrawableChild(row.removeButton);
+            this.addRenderableWidget(row.schemeButton);
+            this.addRenderableWidget(row.hostField);
+            this.addRenderableWidget(row.portField);
+            this.addRenderableWidget(row.removeButton);
         }
     }
 
@@ -520,7 +520,7 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Draws the bordered background blocks that visually group whitelist rows.
      */
-    private void renderOriginBlocks(DrawContext context) {
+    private void renderOriginBlocks(GuiGraphicsExtractor context) {
         int panelTop = listTop - 4;
         int panelBottom = listBottom + 2;
         boolean whitelistEditable = isWhitelistEditable();
@@ -547,7 +547,7 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Draws a simple rectangular border using filled quads.
      */
-    private static void drawBorder(DrawContext context, int x, int y, int width, int height, int color) {
+    private static void drawBorder(GuiGraphicsExtractor context, int x, int y, int width, int height, int color) {
         context.fill(x, y, x + width, y + 1, color);
         context.fill(x, y + height - 1, x + width, y + height, color);
         context.fill(x, y, x + 1, y + height, color);
@@ -584,7 +584,7 @@ final class PlayerCoordsConfigScreen extends Screen {
      * Clamps the current whitelist scroll offset to the valid range.
      */
     private void clampScroll() {
-        scrollOffset = MathHelper.clamp(scrollOffset, 0, getMaxScroll());
+        scrollOffset = Mth.clamp(scrollOffset, 0, getMaxScroll());
     }
 
     /**
@@ -592,7 +592,7 @@ final class PlayerCoordsConfigScreen extends Screen {
      */
     private void removeDraft(OriginDraft draft) {
         originDrafts.remove(draft);
-        clearAndInit();
+        rebuildWidgets();
     }
 
     /**
@@ -636,22 +636,22 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Renders the tooltip currently targeted by the mouse cursor.
      */
-    private void renderHoveredTooltip(DrawContext context, int mouseX, int mouseY) {
-        List<Text> tooltip = getHoveredTooltip(mouseX, mouseY);
+    private void renderHoveredTooltip(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+        List<Component> tooltip = getHoveredTooltip(mouseX, mouseY);
 
         if (!tooltip.isEmpty()) {
-            List<net.minecraft.text.OrderedText> orderedTooltip = new ArrayList<>(tooltip.size());
-            for (Text line : tooltip) {
-                orderedTooltip.add(line.asOrderedText());
+            List<net.minecraft.util.FormattedCharSequence> orderedTooltip = new ArrayList<>(tooltip.size());
+            for (Component line : tooltip) {
+                orderedTooltip.add(line.getVisualOrderText());
             }
-            context.drawTooltip(this.textRenderer, orderedTooltip, TOP_TOOLTIP_POSITIONER, mouseX, mouseY, false);
+            context.setTooltipForNextFrame(this.font, orderedTooltip, TOP_TOOLTIP_POSITIONER, mouseX, mouseY, false);
         }
     }
 
     /**
      * Resolves which tooltip should be shown for the current mouse position.
      */
-    private List<Text> getHoveredTooltip(int mouseX, int mouseY) {
+    private List<Component> getHoveredTooltip(int mouseX, int mouseY) {
         if (isHoveringLabel(apiPortLabel, mouseX, mouseY)) {
             return buildApiPortTooltip();
         }
@@ -680,7 +680,7 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Returns the text field that should currently receive keyboard input.
      */
-    private TextFieldWidget getFocusedTextField() {
+    private EditBox getFocusedTextField() {
         if (apiPortField != null && apiPortField.isFocused()) {
             return apiPortField;
         }
@@ -701,9 +701,9 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Builds the multi-line tooltip used by whitelist host fields.
      */
-    private List<Text> buildHostTooltip() {
-        List<Text> tooltip = new ArrayList<>();
-        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_host.tooltip"));
+    private List<Component> buildHostTooltip() {
+        List<Component> tooltip = new ArrayList<>();
+        tooltip.add(Component.translatable("config.playercoordsapi.option.origin_host.tooltip"));
         tooltip.add(buildHostTooltipLine("config.playercoordsapi.option.origin_host.tooltip.localhost", "localhost"));
         tooltip.add(buildHostTooltipLine("config.playercoordsapi.option.origin_host.tooltip.domain", "example.com"));
         tooltip.add(buildHostTooltipLine("config.playercoordsapi.option.origin_host.tooltip.ipv4", "127.0.0.1"));
@@ -715,31 +715,31 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Builds one highlighted example line for the host tooltip.
      */
-    private Text buildHostTooltipLine(String key, String example) {
-        return Text.translatable(key).append(Text.literal(" " + example).formatted(Formatting.GREEN));
+    private Component buildHostTooltipLine(String key, String example) {
+        return Component.translatable(key).append(Component.literal(" " + example).withStyle(ChatFormatting.GREEN));
     }
 
     /**
      * Builds the tooltip shown for the API port field.
      */
-    private List<Text> buildApiPortTooltip() {
-        List<Text> tooltip = new ArrayList<>();
-        tooltip.add(Text.translatable("config.playercoordsapi.option.api_port.tooltip"));
-        tooltip.add(Text.translatable("config.playercoordsapi.option.api_port.tooltip.range")
-                .append(Text.literal(" " + ModConfig.MIN_API_PORT + "-" + ModConfig.MAX_API_PORT).formatted(Formatting.GREEN)));
-        tooltip.add(Text.translatable("config.playercoordsapi.option.api_port.tooltip.example")
-                .append(Text.literal(" 3000").formatted(Formatting.GREEN)));
+    private List<Component> buildApiPortTooltip() {
+        List<Component> tooltip = new ArrayList<>();
+        tooltip.add(Component.translatable("config.playercoordsapi.option.api_port.tooltip"));
+        tooltip.add(Component.translatable("config.playercoordsapi.option.api_port.tooltip.range")
+                .append(Component.literal(" " + ModConfig.MIN_API_PORT + "-" + ModConfig.MAX_API_PORT).withStyle(ChatFormatting.GREEN)));
+        tooltip.add(Component.translatable("config.playercoordsapi.option.api_port.tooltip.example")
+                .append(Component.literal(" 3000").withStyle(ChatFormatting.GREEN)));
         return tooltip;
     }
 
     /**
      * Builds the tooltip shown for whitelist origin port fields.
      */
-    private List<Text> buildPortTooltip() {
-        List<Text> tooltip = new ArrayList<>();
-        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_port.tooltip"));
-        tooltip.add(Text.translatable("config.playercoordsapi.option.origin_port.tooltip.example")
-                .append(Text.literal(" 3000").formatted(Formatting.GREEN)));
+    private List<Component> buildPortTooltip() {
+        List<Component> tooltip = new ArrayList<>();
+        tooltip.add(Component.translatable("config.playercoordsapi.option.origin_port.tooltip"));
+        tooltip.add(Component.translatable("config.playercoordsapi.option.origin_port.tooltip.example")
+                .append(Component.literal(" 3000").withStyle(ChatFormatting.GREEN)));
         appendWhitelistDisabledHint(tooltip);
         return tooltip;
     }
@@ -747,44 +747,44 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Builds the tooltip for requests that provide an {@code Origin} header.
      */
-    private List<Text> buildWithOriginTooltip() {
-        List<Text> tooltip = new ArrayList<>(6);
-        tooltip.add(Text.translatable("config.playercoordsapi.option.cors_policy.tooltip.1"));
-        tooltip.add(Text.translatable("config.playercoordsapi.option.cors_policy.tooltip.2"));
-        tooltip.add(Text.translatable(
+    private List<Component> buildWithOriginTooltip() {
+        List<Component> tooltip = new ArrayList<>(6);
+        tooltip.add(Component.translatable("config.playercoordsapi.option.cors_policy.tooltip.1"));
+        tooltip.add(Component.translatable("config.playercoordsapi.option.cors_policy.tooltip.2"));
+        tooltip.add(Component.translatable(
                 "config.playercoordsapi.option.cors_policy.tooltip.3",
-                emphasizeTooltipValue(Text.translatable("config.playercoordsapi.option.cors_policy.allow_all"))
+                emphasizeTooltipValue(Component.translatable("config.playercoordsapi.option.cors_policy.allow_all"))
         ));
-        tooltip.add(Text.translatable(
+        tooltip.add(Component.translatable(
                 "config.playercoordsapi.option.cors_policy.tooltip.4",
-                emphasizeTooltipValue(Text.translatable("config.playercoordsapi.option.cors_policy.local_web_apps_only")),
-                Text.literal("localhost").formatted(Formatting.GREEN),
-                Text.literal("127.0.0.1").formatted(Formatting.GREEN),
-                Text.literal("::1").formatted(Formatting.GREEN)
+                emphasizeTooltipValue(Component.translatable("config.playercoordsapi.option.cors_policy.local_web_apps_only")),
+                Component.literal("localhost").withStyle(ChatFormatting.GREEN),
+                Component.literal("127.0.0.1").withStyle(ChatFormatting.GREEN),
+                Component.literal("::1").withStyle(ChatFormatting.GREEN)
         ));
-        tooltip.add(Text.translatable(
+        tooltip.add(Component.translatable(
                 "config.playercoordsapi.option.cors_policy.tooltip.5",
-                emphasizeTooltipValue(Text.translatable("config.playercoordsapi.option.cors_policy.custom_whitelist"))
+                emphasizeTooltipValue(Component.translatable("config.playercoordsapi.option.cors_policy.custom_whitelist"))
         ));
-        tooltip.add(Text.translatable("config.playercoordsapi.option.cors_policy.tooltip.6"));
+        tooltip.add(Component.translatable("config.playercoordsapi.option.cors_policy.tooltip.6"));
         return tooltip;
     }
 
     /**
      * Builds the tooltip for requests that do not provide an {@code Origin} header.
      */
-    private List<Text> buildWithoutOriginTooltip() {
-        List<Text> tooltip = new ArrayList<>(4);
-        tooltip.add(Text.translatable("config.playercoordsapi.option.allow_non_browser_local_clients.tooltip.1"));
-        tooltip.add(Text.translatable("config.playercoordsapi.option.allow_non_browser_local_clients.tooltip.2"));
-        tooltip.add(Text.translatable(
+    private List<Component> buildWithoutOriginTooltip() {
+        List<Component> tooltip = new ArrayList<>(4);
+        tooltip.add(Component.translatable("config.playercoordsapi.option.allow_non_browser_local_clients.tooltip.1"));
+        tooltip.add(Component.translatable("config.playercoordsapi.option.allow_non_browser_local_clients.tooltip.2"));
+        tooltip.add(Component.translatable(
                 "config.playercoordsapi.option.allow_non_browser_local_clients.tooltip.3",
-                emphasizeTooltipValue(ScreenTexts.ON.copy())
+                emphasizeTooltipValue(CommonComponents.OPTION_ON.copy())
         ));
-        tooltip.add(Text.translatable(
+        tooltip.add(Component.translatable(
                 "config.playercoordsapi.option.allow_non_browser_local_clients.tooltip.4",
-                emphasizeTooltipValue(ScreenTexts.OFF.copy()),
-                emphasizeTooltipValue(Text.translatable("config.playercoordsapi.option.cors_policy"))
+                emphasizeTooltipValue(CommonComponents.OPTION_OFF.copy()),
+                emphasizeTooltipValue(Component.translatable("config.playercoordsapi.option.cors_policy"))
         ));
         return tooltip;
     }
@@ -792,29 +792,29 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Applies the shared visual emphasis used for important tooltip values.
      */
-    private Text emphasizeTooltipValue(Text text) {
-        return text.copy().formatted(Formatting.GRAY, Formatting.BOLD);
+    private Component emphasizeTooltipValue(Component text) {
+        return text.copy().withStyle(ChatFormatting.GRAY, ChatFormatting.BOLD);
     }
 
     /**
      * Appends the disabled-editing hint when the whitelist is visible but locked.
      */
-    private void appendWhitelistDisabledHint(List<Text> tooltip) {
+    private void appendWhitelistDisabledHint(List<Component> tooltip) {
         if (!isWhitelistEditable()) {
-            tooltip.add(Text.translatable("config.playercoordsapi.option.allowed_origins.disabled").formatted(Formatting.GRAY));
+            tooltip.add(Component.translatable("config.playercoordsapi.option.allowed_origins.disabled").withStyle(ChatFormatting.GRAY));
         }
     }
 
     /**
      * Draws the top banner summarizing the HTTP server state.
      */
-    private void renderServerStatus(DrawContext context, int left) {
+    private void renderServerStatus(GuiGraphicsExtractor context, int left) {
         int boxTop = STATUS_BOX_Y;
         int boxBottom = boxTop + STATUS_BOX_HEIGHT;
         context.fill(left, boxTop, left + CONTENT_WIDTH, boxBottom, getServerStatusBackgroundColor());
         drawBorder(context, left, boxTop, CONTENT_WIDTH, STATUS_BOX_HEIGHT, getServerStatusBorderColor());
-        context.drawCenteredTextWithShadow(
-                this.textRenderer,
+        context.centeredText(
+                this.font,
                 getServerStatusText(),
                 this.width / 2,
                 boxTop + 4,
@@ -825,14 +825,14 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Returns the localized text shown inside the server status banner.
      */
-    private Text getServerStatusText() {
+    private Component getServerStatusText() {
         PlayerCoordsAPIClient.ServerStatus status = PlayerCoordsAPIClient.getServerStatus();
 
         return switch (status.state()) {
-            case DISABLED -> Text.translatable("config.playercoordsapi.status.disabled");
-            case STOPPED -> Text.translatable("config.playercoordsapi.status.stopped", status.port());
-            case RUNNING -> Text.translatable("config.playercoordsapi.status.running", status.port());
-            case FAILED -> Text.translatable("config.playercoordsapi.status.failed", status.port(), status.detail());
+            case DISABLED -> Component.translatable("config.playercoordsapi.status.disabled");
+            case STOPPED -> Component.translatable("config.playercoordsapi.status.stopped", status.port());
+            case RUNNING -> Component.translatable("config.playercoordsapi.status.running", status.port());
+            case FAILED -> Component.translatable("config.playercoordsapi.status.failed", status.port(), status.detail());
         };
     }
 
@@ -882,8 +882,21 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Returns whether the cursor is hovering the active area of a setting label.
      */
-    private static boolean isHoveringLabel(TextWidget label, int mouseX, int mouseY) {
+    private static boolean isHoveringLabel(StringWidget label, int mouseX, int mouseY) {
         return isWithin(mouseX, mouseY, label.getX(), label.getY(), label.getWidth(), ROW_HEIGHT);
+    }
+
+    /**
+     * Keeps port fields numeric after the 26.1 EditBox API removed direct input filters.
+     */
+    private static String keepDigitsOnly(EditBox field, String value) {
+        String digitsOnly = value.replaceAll("\\D", "");
+
+        if (!digitsOnly.equals(value)) {
+            field.setValue(digitsOnly);
+        }
+
+        return digitsOnly;
     }
 
     /**
@@ -896,15 +909,15 @@ final class PlayerCoordsConfigScreen extends Screen {
     /**
      * Returns the localized label used by the with-origin policy cycling button.
      */
-    private static Text getCorsPolicyLabel(ModConfig.CorsPolicy policy) {
-        return Text.translatable("config.playercoordsapi.option.cors_policy." + policy.name().toLowerCase(Locale.ROOT));
+    private static Component getCorsPolicyLabel(ModConfig.CorsPolicy policy) {
+        return Component.translatable("config.playercoordsapi.option.cors_policy." + policy.name().toLowerCase(Locale.ROOT));
     }
 
     /**
      * Returns the localized label used by the origin scheme cycling button.
      */
-    private static Text getOriginSchemeModeLabel(ModConfig.OriginSchemeMode mode) {
-        return Text.translatable("config.playercoordsapi.option.origin_scheme." + mode.name().toLowerCase(Locale.ROOT));
+    private static Component getOriginSchemeModeLabel(ModConfig.OriginSchemeMode mode) {
+        return Component.translatable("config.playercoordsapi.option.origin_scheme." + mode.name().toLowerCase(Locale.ROOT));
     }
 
     /**
@@ -938,44 +951,43 @@ final class PlayerCoordsConfigScreen extends Screen {
      * One rendered whitelist row composed of scheme, host, port, and remove controls.
      */
     private final class OriginRow {
-        private final CyclingButtonWidget<ModConfig.OriginSchemeMode> schemeButton;
-        private final TextFieldWidget hostField;
-        private final TextFieldWidget portField;
-        private final ButtonWidget removeButton;
+        private final CycleButton<ModConfig.OriginSchemeMode> schemeButton;
+        private final EditBox hostField;
+        private final EditBox portField;
+        private final Button removeButton;
 
         /**
          * Builds the widgets backing a single whitelist row.
          */
         private OriginRow(OriginDraft draft) {
-            this.schemeButton = CyclingButtonWidget.builder(PlayerCoordsConfigScreen::getOriginSchemeModeLabel, draft.mode)
-                    .values(ModConfig.OriginSchemeMode.values())
-                    .omitKeyText()
-                    .build(0, 0, ORIGIN_SCHEME_WIDTH, ROW_HEIGHT, ScreenTexts.EMPTY, (button, value) -> {
+            this.schemeButton = CycleButton.builder(PlayerCoordsConfigScreen::getOriginSchemeModeLabel, draft.mode)
+                    .withValues(ModConfig.OriginSchemeMode.values())
+                    .displayOnlyValue()
+                    .create(0, 0, ORIGIN_SCHEME_WIDTH, ROW_HEIGHT, CommonComponents.EMPTY, (button, value) -> {
                         draft.mode = value;
                         updateValidation();
                     });
 
-            this.hostField = new TextFieldWidget(PlayerCoordsConfigScreen.this.textRenderer, 0, 0, 160, ROW_HEIGHT, ScreenTexts.EMPTY);
+            this.hostField = new EditBox(PlayerCoordsConfigScreen.this.font, 0, 0, 160, ROW_HEIGHT, CommonComponents.EMPTY);
             this.hostField.setMaxLength(255);
-            this.hostField.setPlaceholder(Text.translatable("config.playercoordsapi.option.origin_host"));
-            this.hostField.setText(draft.host);
-            this.hostField.setChangedListener(value -> {
+            this.hostField.setHint(Component.translatable("config.playercoordsapi.option.origin_host"));
+            this.hostField.setValue(draft.host);
+            this.hostField.setResponder(value -> {
                 draft.host = value;
                 updateValidation();
             });
 
-            this.portField = new TextFieldWidget(PlayerCoordsConfigScreen.this.textRenderer, 0, 0, ORIGIN_PORT_WIDTH, ROW_HEIGHT, ScreenTexts.EMPTY);
+            this.portField = new EditBox(PlayerCoordsConfigScreen.this.font, 0, 0, ORIGIN_PORT_WIDTH, ROW_HEIGHT, CommonComponents.EMPTY);
             this.portField.setMaxLength(5);
-            this.portField.setTextPredicate(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
-            this.portField.setPlaceholder(Text.translatable("config.playercoordsapi.option.origin_port"));
-            this.portField.setText(draft.port);
-            this.portField.setChangedListener(value -> {
-                draft.port = value;
+            this.portField.setHint(Component.translatable("config.playercoordsapi.option.origin_port"));
+            this.portField.setValue(draft.port);
+            this.portField.setResponder(value -> {
+                draft.port = keepDigitsOnly(portField, value);
                 updateValidation();
             });
 
-            this.removeButton = ButtonWidget.builder(Text.literal("X"), button -> removeDraft(draft))
-                    .dimensions(0, 0, ORIGIN_REMOVE_WIDTH, ROW_HEIGHT)
+            this.removeButton = Button.builder(Component.literal("X"), button -> removeDraft(draft))
+                    .bounds(0, 0, ORIGIN_REMOVE_WIDTH, ROW_HEIGHT)
                     .build();
         }
 
@@ -988,18 +1000,18 @@ final class PlayerCoordsConfigScreen extends Screen {
             hostField.visible = visible;
             hostField.active = visible && editable;
             hostField.setEditable(visible && editable);
-            hostField.setEditableColor(0xFFE0E0E0);
-            hostField.setUneditableColor(0xFF808080);
-            hostField.setFocusUnlocked(editable);
+            hostField.setTextColor(0xFFE0E0E0);
+            hostField.setTextColorUneditable(0xFF808080);
+            hostField.setCanLoseFocus(editable);
             if (!editable) {
                 hostField.setFocused(false);
             }
             portField.visible = visible;
             portField.active = visible && editable;
             portField.setEditable(visible && editable);
-            portField.setEditableColor(0xFFE0E0E0);
-            portField.setUneditableColor(0xFF808080);
-            portField.setFocusUnlocked(editable);
+            portField.setTextColor(0xFFE0E0E0);
+            portField.setTextColorUneditable(0xFF808080);
+            portField.setCanLoseFocus(editable);
             if (!editable) {
                 portField.setFocused(false);
             }
@@ -1010,7 +1022,7 @@ final class PlayerCoordsConfigScreen extends Screen {
         /**
          * Tries to focus one of the row text fields from the given mouse click.
          */
-        private boolean tryFocusField(Click click, boolean doubleClick) {
+        private boolean tryFocusField(MouseButtonEvent click, boolean doubleClick) {
             if (!hostField.visible || !hostField.active) {
                 return false;
             }

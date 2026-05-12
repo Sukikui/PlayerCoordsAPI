@@ -13,6 +13,6 @@ pluginManagement {
 		gradlePluginPortal()
 	}
 	plugins {
-		id "fabric-loom" version loomVersion
+		id "net.fabricmc.fabric-loom" version loomVersion
 	}
 }
