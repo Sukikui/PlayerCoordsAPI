@@ -1,6 +1,9 @@
 <div align="center">
 
-# PlayerCoordsAPI
+<h1>
+<img src="assets/round_icon.png" width="48" height="48" alt="PlayerCoordsAPI icon" style="vertical-align: middle;">
+PlayerCoordsAPI
+</h1>
 
 A lightweight Fabric mod that exposes your Minecraft player coordinates via a local HTTP API.
 
