@@ -31,7 +31,7 @@ jobs:
           path: build/libs/
 
       - name: 🚀 Upload artifacts to Modrinth and GitHub
-        uses: Kir-Antipov/mc-publish@v3.3.0
+        uses: Kir-Antipov/mc-publish@v3.3.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
